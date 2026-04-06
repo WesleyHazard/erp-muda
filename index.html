@@ -176,6 +176,24 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .parado-badge{background:#f3f4f6;color:#6b7280;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
 .parado-badge.critico{background:#fef2f2;color:#dc2626}
 .parado-badge.atencao{background:#fffbeb;color:#d97706}
+/* BOTÃO X MODAL */
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;padding:0;margin:0}
+.modal-close:hover{color:#374151}
+/* LOG */
+.log-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:12px}
+.log-icon{font-size:14px;min-width:20px}
+.log-info{flex:1}
+.log-user{font-weight:700;color:#374151}
+.log-msg{color:#6b7280;margin-top:1px}
+.log-time{font-size:10px;color:#9ca3af;margin-top:2px}
+/* PROJ MELHORIAS */
+.proj-orcamento{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;margin-top:10px}
+.proj-prog-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:6px}
+.proj-prog-fill{height:100%;background:#16a34a;border-radius:4px;transition:width .3s}
+/* ESTOQUE MAX */
+.est-max-badge{font-size:9px;color:#0891b2;background:#e0f2fe;padding:1px 5px;border-radius:4px;font-weight:700}
+
 </style>
 </head>
 <body>
@@ -200,7 +218,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 <!-- MODAIS -->
 <div class="modal-bg" id="modal-mov">
 <div class="modal">
-  <div class="modal-title" id="mm-title">Registrar Movimentação</div>
+  <div class="modal-header"><div class="modal-title" id="mm-title">Registrar Movimentação</div><button class="modal-close" onclick="fecharModal('modal-mov')">×</button></div>
   <div class="modal-sub" id="mm-sub"></div>
   <div style="display:flex;flex-direction:column;gap:10px">
     <div class="tipo-btns">
@@ -224,7 +242,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <div class="modal-bg" id="modal-qr">
 <div class="modal" style="max-width:360px;text-align:center">
-  <div class="modal-title">🏷️ QR Code do Item</div>
+  <div class="modal-header"><div class="modal-title">🏷️ QR Code do Item</div><button class="modal-close" onclick="fecharModal('modal-qr')">×</button></div>
   <div style="padding:16px">
     <div class="qr-box" id="qr-canvas"></div>
     <div style="font-weight:700;font-size:15px;color:#14532d;margin-top:8px" id="qr-nome"></div>
@@ -240,7 +258,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <div class="modal-bg" id="modal-forn">
 <div class="modal">
-  <div class="modal-title" id="mf-title">Novo Fornecedor</div>
+  <div class="modal-header"><div class="modal-title" id="mf-title">Novo Fornecedor</div><button class="modal-close" onclick="fecharModal('modal-forn')">×</button></div>
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
     <div class="fg"><label>Nome *</label><input type="text" id="mf-nome"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -268,7 +286,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <div class="modal-bg" id="modal-proj">
 <div class="modal">
-  <div class="modal-title" id="mp-title">Novo Projeto</div>
+  <div class="modal-header"><div class="modal-title" id="mp-title">Novo Projeto</div><button class="modal-close" onclick="fecharModal('modal-proj')">×</button></div>
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
     <div class="fg"><label>Nome do Projeto *</label><input type="text" id="mp-nome"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -289,7 +307,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <div class="modal-bg" id="modal-perfil">
 <div class="modal" style="max-width:500px">
-  <div class="modal-title">👤 Meu Perfil</div>
+  <div class="modal-header"><div class="modal-title">👤 Meu Perfil</div><button class="modal-close" onclick="fecharModal('modal-perfil')">×</button></div>
   <div style="margin-top:16px">
     <div style="text-align:center;margin-bottom:20px">
       <div style="position:relative;display:inline-block">
@@ -337,6 +355,55 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 </div>
 
+
+<div class="modal-bg" id="modal-log">
+<div class="modal" style="max-width:600px">
+  <div class="modal-header">
+    <div class="modal-title">📋 Log de Atividades</div>
+    <button class="modal-close" onclick="fecharModal('modal-log')">×</button>
+  </div>
+  <div style="margin-top:4px;font-size:12px;color:#6b7280;margin-bottom:12px">Registro de todas as ações realizadas no sistema</div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <select class="sel" id="log-filtro-tipo" onchange="renderLog()" style="font-size:12px">
+      <option value="">Todas as ações</option>
+      <option value="login">🔐 Logins</option>
+      <option value="cadastro">➕ Cadastros</option>
+      <option value="edicao">✏️ Edições</option>
+      <option value="exclusao">🗑️ Exclusões</option>
+      <option value="movimentacao">↔️ Movimentações</option>
+    </select>
+    <button class="btn-gray" style="font-size:12px" onclick="limparLog()">🗑️ Limpar Log</button>
+  </div>
+  <div id="lista-log" style="max-height:400px;overflow-y:auto"></div>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-orcamento">
+<div class="modal" style="max-width:600px">
+  <div class="modal-header">
+    <div class="modal-title" id="mo-title">💰 Orçamento do Projeto</div>
+    <button class="modal-close" onclick="fecharModal('modal-orcamento')">×</button>
+  </div>
+  <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>Orçamento Previsto (R$)</label><input type="number" id="mo-previsto" placeholder="0,00" oninput="calcularOrcamento()"></div>
+      <div class="fg"><label>Gasto Real (R$)</label><input type="number" id="mo-gasto" placeholder="Calculado automaticamente" readonly style="background:#f9fafb"></div>
+    </div>
+    <div id="mo-barra" style="display:none">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px">
+        <span>Progresso do orçamento</span>
+        <span id="mo-pct">0%</span>
+      </div>
+      <div class="proj-prog-bar"><div class="proj-prog-fill" id="mo-fill" style="width:0%"></div></div>
+    </div>
+    <div id="mo-materiais-lista" style="margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-confirmar" onclick="salvarOrcamento()">Salvar Orçamento</button>
+      <button class="btn-gray" onclick="fecharModal('modal-orcamento')">Fechar</button>
+    </div>
+  </div>
+</div>
+</div>
 <!-- SISTEMA -->
 <div id="tela-sistema" style="display:none">
 <div class="header">
@@ -359,6 +426,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div class="user-avatar" id="header-avatar" onclick="abrirPerfil()"><span id="header-avatar-inicial"></span></div>
       <span class="user-name" onclick="abrirPerfil()" id="user-nome-badge"></span>
       <span class="nivel-pill" id="nivel-badge"></span>
+      <button class="logout-btn" onclick="abrirLog()" style="background:#ffffff22">📋 Log</button>
       <button class="logout-btn" onclick="fazerLogout()">Sair</button>
     </div>
   </div>
@@ -473,9 +541,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
             </div>
             <div class="fg"><label>Quantidade *</label><input type="number" id="fi-qty" placeholder="0"></div>
             <div class="fg"><label>Estoque Mínimo</label><input type="number" id="fi-min"></div>
+            <div class="fg"><label>Estoque Máximo</label><input type="number" id="fi-max" placeholder="Opcional"></div>
             <div class="fg"><label>Fornecedor</label><input type="text" id="fi-forn"></div>
             <div class="fg"><label>Custo (R$)</label><input type="number" id="fi-custo"></div>
             <div class="fg" style="grid-column:1/-1"><label>Descrição</label><input type="text" id="fi-desc"></div>
+            <div class="fg" style="grid-column:1/-1"><label>💬 Comentários Internos</label><input type="text" id="fi-obs" placeholder="Observações internas sobre o item..."></div>
           </div>
         </div>
       </div>
@@ -793,6 +863,8 @@ function fazerLogin(){
   if(perfil.foto)document.getElementById('header-avatar').innerHTML=`<img src="${perfil.foto}">`;
   aplicarPermissoes();
   projetos=ls('muda_projetos');fornecedores=ls('muda_fornecedores');
+  carregarLog();
+  registrarLog('login', `Login realizado`, '🔐');
   carregarDados();
   const params=new URLSearchParams(window.location.search);
   if(params.get('item'))setTimeout(()=>abrirItemPorQR(params.get('item')),1000);
@@ -924,10 +996,10 @@ function renderEstoque(){
       <div class="ic-info"><div class="ic-nome">${p.nome}</div>
         ${col('col-loc')&&p.localizacao?`<div class="ic-loc">📍 ${p.localizacao}</div>`:''}
         <div class="ic-codes">${col('col-codigo')?`<span class="ic-code">🏷️ ${cod}</span>`:''}${col('col-sku')&&p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}</div>
-        <div class="ic-meta">${col('col-forn')&&p.fornecedor?`<span>🏭 ${p.fornecedor}</span>`:''}${col('col-custo')&&Number(p.custo)>0?`<span>💰 R$ ${Number(p.custo).toFixed(2)}</span>`:''}${col('col-desc')&&p.descricao?`<span>📝 ${p.descricao}</span>`:''}</div>
+        <div class="ic-meta">${col('col-forn')&&p.fornecedor?`<span>🏭 ${p.fornecedor}</span>`:''}${col('col-custo')&&Number(p.custo)>0?`<span>💰 R$ ${Number(p.custo).toFixed(2)}</span>`:''}${col('col-desc')&&p.descricao?`<span>📝 ${p.descricao}</span>`:''}${p.observacoes?`<span style="color:#d97706">💬 ${p.observacoes}</span>`:''}</div>
       </div>
       ${col('col-cat')?`<span class="pill ${low?'low':''}">${c?.label||p.categoria}</span>`:''}
-      <div class="ic-qty"><div class="ic-qty-val ${low?'low':''}">${p.quantidade}</div><div class="ic-qty-unit">${p.unidade}</div>${col('col-min')&&p.estoqueMinimo>0?`<div style="font-size:9px;color:${low?'#dc2626':'#9ca3af'}">${low?'⚠️':'✅'} ${p.estoqueMinimo}</div>`:''}</div>
+      <div class="ic-qty"><div class="ic-qty-val ${low?'low':''}">${p.quantidade}</div><div class="ic-qty-unit">${p.unidade}</div>${col('col-min')&&p.estoqueMinimo>0?`<div style="font-size:9px;color:${low?'#dc2626':'#9ca3af'}">${low?'⚠️':'✅'} mín:${p.estoqueMinimo}</div>`:''} ${p.estoqueMaximo>0?`<div class="est-max-badge">máx:${p.estoqueMaximo}</div>`:''}</div>
       <div class="ic-actions">
         ${pode('editar')?`<button class="btn-in" onclick="abrirMovRapida('${p.id}','entrada')">▲</button><button class="btn-out" onclick="abrirMovRapida('${p.id}','saida')">▼</button>`:''}
         ${pode('editar')?`<button class="btn-blue" onclick="editarItem('${p.id}')">✏️</button>`:''}
@@ -938,17 +1010,17 @@ function renderEstoque(){
 }
 function toggleForm(){if(!pode('cadastrar'))return showToast('Sem permissão.','err');const f=document.getElementById('form-item');f.style.display=f.style.display==='none'?'block':'none';if(f.style.display==='block'){editItemId=null;fotoBase64=null;limparForm();}}
 function cancelarForm(){document.getElementById('form-item').style.display='none';editItemId=null;fotoBase64=null;limparForm();}
-function limparForm(){['nome','sku','loc','qty','min','forn','custo','desc'].forEach(k=>{const el=document.getElementById('fi-'+k);if(el)el.value='';});document.getElementById('fi-cat').value='plantas_naturais';document.getElementById('fi-un').value='un';document.getElementById('form-item-title').textContent='➕ Cadastrar Novo Item';document.querySelector('#form-item .btn-green').textContent='Cadastrar Item';document.getElementById('foto-preview-wrap').style.display='none';document.getElementById('foto-placeholder').style.display='block';}
+function limparForm(){['nome','sku','loc','qty','min','max','forn','custo','desc','obs'].forEach(k=>{const el=document.getElementById('fi-'+k);if(el)el.value='';});document.getElementById('fi-cat').value='plantas_naturais';document.getElementById('fi-un').value='un';document.getElementById('form-item-title').textContent='➕ Cadastrar Novo Item';document.querySelector('#form-item .btn-green').textContent='Cadastrar Item';document.getElementById('foto-preview-wrap').style.display='none';document.getElementById('foto-placeholder').style.display='block';}
 function previewFoto(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{fotoBase64=ev.target.result;document.getElementById('fi-foto-preview').src=fotoBase64;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';};reader.readAsDataURL(file);}
 async function salvarItem(){
   if(!pode('cadastrar'))return showToast('Sem permissão.','err');
   const nome=document.getElementById('fi-nome').value.trim();const qty=document.getElementById('fi-qty').value;
   if(!nome||qty==='')return showToast('Preencha nome e quantidade.','err');
-  const p={nome,sku:document.getElementById('fi-sku').value,localizacao:document.getElementById('fi-loc').value,categoria:document.getElementById('fi-cat').value,quantidade:qty,unidade:document.getElementById('fi-un').value,estoqueMinimo:document.getElementById('fi-min').value||0,fornecedor:document.getElementById('fi-forn').value,custo:document.getElementById('fi-custo').value||0,descricao:document.getElementById('fi-desc').value,foto:fotoBase64||''};
+  const p={nome,sku:document.getElementById('fi-sku').value,localizacao:document.getElementById('fi-loc').value,categoria:document.getElementById('fi-cat').value,quantidade:qty,unidade:document.getElementById('fi-un').value,estoqueMinimo:document.getElementById('fi-min').value||0,estoqueMaximo:document.getElementById('fi-max').value||0,fornecedor:document.getElementById('fi-forn').value,custo:document.getElementById('fi-custo').value||0,descricao:document.getElementById('fi-desc').value,observacoes:document.getElementById('fi-obs').value||'',foto:fotoBase64||''};
   try{if(editItemId){await api({action:'editProduto',id:editItemId,...p});showToast('Item atualizado!');}else{await api({action:'addProduto',...p});showToast('Item cadastrado!');}cancelarForm();await carregarDados();}catch(e){showToast('Erro ao salvar.','err');}
 }
-function editarItem(id){if(!pode('editar'))return;const p=produtos.find(x=>x.id==id);if(!p)return;editItemId=id;fotoBase64=p.foto||null;document.getElementById('fi-nome').value=p.nome;document.getElementById('fi-sku').value=p.sku||'';document.getElementById('fi-loc').value=p.localizacao||'';document.getElementById('fi-cat').value=p.categoria;document.getElementById('fi-un').value=p.unidade;document.getElementById('fi-qty').value=p.quantidade;document.getElementById('fi-min').value=p.estoqueMinimo||'';document.getElementById('fi-forn').value=p.fornecedor||'';document.getElementById('fi-custo').value=p.custo||'';document.getElementById('fi-desc').value=p.descricao||'';if(p.foto){document.getElementById('fi-foto-preview').src=p.foto;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';}document.getElementById('form-item-title').textContent='✏️ Editar Item';document.querySelector('#form-item .btn-green').textContent='Salvar Alterações';document.getElementById('form-item').style.display='block';window.scrollTo(0,0);}
-async function deletarItem(id){if(!pode('deletar'))return;if(!confirm('Remover este item?'))return;try{await api({action:'deleteProduto',id});showToast('Removido.');await carregarDados();}catch(e){showToast('Erro.','err');}}
+function editarItem(id){if(!pode('editar'))return;const p=produtos.find(x=>x.id==id);if(!p)return;editItemId=id;fotoBase64=p.foto||null;document.getElementById('fi-nome').value=p.nome;document.getElementById('fi-sku').value=p.sku||'';document.getElementById('fi-loc').value=p.localizacao||'';document.getElementById('fi-cat').value=p.categoria;document.getElementById('fi-un').value=p.unidade;document.getElementById('fi-qty').value=p.quantidade;document.getElementById('fi-min').value=p.estoqueMinimo||'';document.getElementById('fi-max').value=p.estoqueMaximo||'';document.getElementById('fi-forn').value=p.fornecedor||'';document.getElementById('fi-custo').value=p.custo||'';document.getElementById('fi-desc').value=p.descricao||'';document.getElementById('fi-obs').value=p.observacoes||'';if(p.foto){document.getElementById('fi-foto-preview').src=p.foto;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';}document.getElementById('form-item-title').textContent='✏️ Editar Item';document.querySelector('#form-item .btn-green').textContent='Salvar Alterações';document.getElementById('form-item').style.display='block';window.scrollTo(0,0);}
+async function deletarItem(id){if(!pode('deletar'))return;if(!confirm('Remover este item?'))return;try{const pDel=produtos.find(x=>x.id==id);await api({action:'deleteProduto',id});showToast('Removido.');registrarLog('exclusao',`Item excluído: ${pDel?.nome||id}`,'🗑️');await carregarDados();}catch(e){showToast('Erro.','err');}}
 
 function abrirQR(id){if(!pode('qr'))return showToast('Apenas administradores.','err');const p=produtos.find(x=>x.id==id);if(!p)return;qrItemAtual=p;const cod=getCodigo(p);const url=window.location.origin+window.location.pathname+'?item='+cod;document.getElementById('qr-canvas').innerHTML='';new QRCode(document.getElementById('qr-canvas'),{text:url,width:160,height:160,colorDark:'#14532d',colorLight:'#ffffff'});document.getElementById('qr-nome').textContent=p.nome;document.getElementById('qr-codes').innerHTML=`<span class="ic-code">🏷️ ${cod}</span>${p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}`;document.getElementById('qr-loc').textContent=p.localizacao?'📍 '+p.localizacao:'';document.getElementById('modal-qr').classList.add('open');}
 function imprimirEtiqueta(){if(!qrItemAtual)return;const p=qrItemAtual;const cod=getCodigo(p);const url=window.location.origin+window.location.pathname+'?item='+cod;const win=window.open('','_blank','width=400,height=300');win.document.write(`<html><head><title>Etiqueta</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body style="font-family:Arial;text-align:center;padding:20px"><div id="qr"></div><div style="font-weight:700;font-size:14px;margin-top:8px">${p.nome}</div><div style="color:#16a34a;font-weight:700;font-size:12px">${cod}</div>${p.sku?`<div style="color:#7c3aed;font-size:11px">SKU: ${p.sku}</div>`:''}${p.localizacao?`<div style="color:#6b7280;font-size:11px">📍 ${p.localizacao}</div>`:''}<script>new QRCode(document.getElementById('qr'),{text:'${url}',width:120,height:120,colorDark:'#14532d'});setTimeout(()=>window.print(),500);<\/script></body></html>`);win.document.close();}
@@ -966,7 +1038,7 @@ async function salvarMovTab(){
   if(!qty||qty<=0)return showToast('Quantidade inválida.','err');if(!resp)return showToast('Informe o responsável.','err');
   const p=produtos.find(x=>x.id==movItemTab);if(!p)return;
   if(movTipoTab==='saida'&&Number(p.quantidade)-qty<0)return showToast('Estoque insuficiente!','err');
-  try{const nova=movTipoTab==='entrada'?Number(p.quantidade)+qty:Number(p.quantidade)-qty;await api({action:'addMovimentacao',itemId:movItemTab,itemNome:p.nome,tipo:movTipoTab,quantidade:qty,motivo:document.getElementById('mov-motivo2').value,responsavel:resp,projeto:document.getElementById('mov-proj2').value||'—',obs:document.getElementById('mov-obs2').value});await api({action:'editProduto',id:movItemTab,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',foto:p.foto||''});showToast(movTipoTab==='entrada'?'Entrada registrada!':'Saída registrada!');adicionarNotif(`${movTipoTab==='entrada'?'Entrada':'Saída'}: ${p.nome} (${movTipoTab==='entrada'?'+':'-'}${qty} ${p.unidade})`,'info',movTipoTab==='entrada'?'📥':'📤');document.getElementById('mov-search').value='';document.getElementById('mov-selected').style.display='none';document.getElementById('mov-qty2').value='';document.getElementById('mov-resp2').value='';document.getElementById('mov-obs2').value='';movItemTab=null;await carregarDados();}catch(e){showToast('Erro.','err');}
+  try{const nova=movTipoTab==='entrada'?Number(p.quantidade)+qty:Number(p.quantidade)-qty;await api({action:'addMovimentacao',itemId:movItemTab,itemNome:p.nome,tipo:movTipoTab,quantidade:qty,motivo:document.getElementById('mov-motivo2').value,responsavel:resp,projeto:document.getElementById('mov-proj2').value||'—',obs:document.getElementById('mov-obs2').value});await api({action:'editProduto',id:movItemTab,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',foto:p.foto||''});showToast(movTipoTab==='entrada'?'Entrada registrada!':'Saída registrada!');registrarLog('movimentacao',`${movTipoTab==='entrada'?'Entrada':'Saída'}: ${p.nome} (${movTipoTab==='entrada'?'+':'-'}${qty} ${p.unidade})`,movTipoTab==='entrada'?'📥':'📤');adicionarNotif(`${movTipoTab==='entrada'?'Entrada':'Saída'}: ${p.nome} (${movTipoTab==='entrada'?'+':'-'}${qty} ${p.unidade})`,'info',movTipoTab==='entrada'?'📥':'📤');document.getElementById('mov-search').value='';document.getElementById('mov-selected').style.display='none';document.getElementById('mov-qty2').value='';document.getElementById('mov-resp2').value='';document.getElementById('mov-obs2').value='';movItemTab=null;await carregarDados();}catch(e){showToast('Erro.','err');}
 }
 function abrirMovRapida(id,tipo){if(!pode('editar'))return showToast('Sem permissão.','err');movItemModal=id;const p=produtos.find(x=>x.id==id);document.getElementById('mm-title').textContent=tipo==='entrada'?'▲ Registrar Entrada':'▼ Registrar Saída';document.getElementById('mm-sub').textContent=p?`${p.nome} — saldo: ${p.quantidade} ${p.unidade}`:'';['mm-qty','mm-resp','mm-obs'].forEach(i=>document.getElementById(i).value='');setTipo(tipo);popularMovSels();document.getElementById('modal-mov').classList.add('open');}
 function setTipo(t){movTipoModal=t;document.getElementById('mm-btn-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mm-btn-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mm-motivo');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?ME:MS).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
@@ -986,7 +1058,10 @@ function renderHistorico(){
 function renderReposicao(){const q=document.getElementById('rep-search')?.value.toLowerCase()||'';const cat=document.getElementById('rep-cat')?.value||'';const showForn=document.getElementById('rcol-forn')?.checked!==false;const showLoc=document.getElementById('rcol-loc')?.checked!==false;const showFalta=document.getElementById('rcol-falta')?.checked!==false;const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo)&&(!cat||p.categoria===cat)&&(p.nome.toLowerCase().includes(q)));document.getElementById('lista-reposicao').innerHTML=baixo.length?baixo.map(p=>`<div class="repos-item"><div><div style="font-weight:600;font-size:13px">${p.nome}</div><div style="font-size:11px;color:#9ca3af">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}${showForn&&p.fornecedor?' · 🏭 '+p.fornecedor:''} ${showLoc&&p.localizacao?'· 📍 '+p.localizacao:''}</div></div><div style="text-align:right"><div style="font-weight:700;color:#dc2626">Saldo: ${p.quantidade} ${p.unidade}</div>${showFalta?`<div style="font-size:11px;color:#9ca3af">Mín: ${p.estoqueMinimo} · Falta: ~${Math.max(0,Number(p.estoqueMinimo)-Number(p.quantidade))}</div>`:''}</div></div>`).join(''):'<div class="empty">✅ Nenhum item precisa de reposição!</div>';}
 function exportarReposicao(){const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));if(!baixo.length)return showToast('Nenhum item para repor!');const txt='🌿 LISTA DE REPOSIÇÃO — MUDA PAISAGISMO\n📅 '+new Date().toLocaleDateString('pt-BR')+'\n\n'+baixo.map((p,i)=>`${i+1}. ${p.nome}\n   Saldo: ${p.quantidade} ${p.unidade} | Mínimo: ${p.estoqueMinimo}${p.fornecedor?'\n   Fornecedor: '+p.fornecedor:''}`).join('\n\n');navigator.clipboard.writeText(txt).then(()=>showToast('Lista copiada! ✅'));}
 
-function renderProjetos(){const q=document.getElementById('proj-search').value.toLowerCase();const sf=document.getElementById('proj-sf').value;const showResp=document.getElementById('pcol-resp')?.checked!==false;const showObs=document.getElementById('pcol-obs')?.checked!==false;const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;const fil=projetos.filter(p=>(!sf||p.status===sf)&&(p.nome.toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};const slc={ativo:'ps-ativo',concluido:'ps-concluido',pausado:'ps-pausado'};document.getElementById('lista-projetos').innerHTML=fil.length?fil.map(p=>`<div class="proj-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${p.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}</div></div><div style="display:flex;gap:6px;align-items:center"><span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>${pode('editar')?`<button class="btn-blue" onclick="abrirModalProj('${p.id}')">✏️</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarProj('${p.id}')">🗑️</button>`:''}</div></div>${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}${showSaidas?`<div style="font-size:12px;color:#374151;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6">📦 ${historico.filter(h=>h.projeto===p.nome&&h.tipo==='saida').length} saídas registradas</div>`:''}</div>`).join(''):'<div class="empty">Nenhum projeto encontrado.</div>';}
+function renderProjetos(){const q=document.getElementById('proj-search').value.toLowerCase();const sf=document.getElementById('proj-sf').value;const showResp=document.getElementById('pcol-resp')?.checked!==false;const showObs=document.getElementById('pcol-obs')?.checked!==false;const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;const fil=projetos.filter(p=>(!sf||p.status===sf)&&(p.nome.toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};const slc={ativo:'ps-ativo',concluido:'ps-concluido',pausado:'ps-pausado'};document.getElementById('lista-projetos').innerHTML=fil.length?fil.map(p=>`<div class="proj-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${p.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}</div></div><div style="display:flex;gap:6px;align-items:center"><span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>${pode('editar')?`<button class="btn-blue" onclick="abrirModalProj('${p.id}')">✏️</button>`:''}${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="abrirOrcamento('${p.id}')">💰</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarProj('${p.id}')">🗑️</button>`:''}</div></div>${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}${showSaidas?`<div style="font-size:12px;color:#374151;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center">
+        <span>📦 ${historico.filter(h=>h.projeto===p.nome&&h.tipo==="saida").length} saídas registradas</span>
+        ${p.orcamentoPrevisto?`<span style="font-size:11px;color:#16a34a;font-weight:700">💰 Orç: R$ ${Number(p.orcamentoPrevisto).toLocaleString("pt-BR",{minimumFractionDigits:2})}</span>`:""}
+      </div>`:""}`</div>`).join(''):'<div class="empty">Nenhum projeto encontrado.</div>';}
 function abrirModalProj(id){editProjId=id||null;const p=id?projetos.find(x=>x.id===id):null;document.getElementById('mp-title').textContent=p?'✏️ Editar Projeto':'➕ Novo Projeto';document.getElementById('mp-nome').value=p?.nome||'';document.getElementById('mp-cliente').value=p?.cliente||'';document.getElementById('mp-resp').value=p?.responsavel||'';document.getElementById('mp-status').value=p?.status||'ativo';document.getElementById('mp-obs').value=p?.obs||'';document.getElementById('modal-proj').classList.add('open');}
 function salvarProjeto(){const nome=document.getElementById('mp-nome').value.trim();const cliente=document.getElementById('mp-cliente').value.trim();if(!nome||!cliente)return showToast('Preencha nome e cliente.','err');const p={id:editProjId||Date.now().toString(),nome,cliente,responsavel:document.getElementById('mp-resp').value,status:document.getElementById('mp-status').value,obs:document.getElementById('mp-obs').value};projetos=editProjId?projetos.map(x=>x.id===editProjId?p:x):[...projetos,p];sl('muda_projetos',projetos);showToast(editProjId?'Projeto atualizado!':'Projeto cadastrado!');fecharModal('modal-proj');renderProjetos();popularMovSels();document.getElementById('st-proj').textContent=projetos.filter(p=>p.status==='ativo').length;}
 function deletarProj(id){if(!confirm('Remover?'))return;projetos=projetos.filter(p=>p.id!==id);sl('muda_projetos',projetos);renderProjetos();showToast('Removido.');}
@@ -1073,6 +1148,129 @@ function gerarConteudoImpressao(id){
   if(id==='rel-parados'){const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();const ip=produtos.map(p=>{const movs=historico.filter(h=>h.itemId==p.id);let dp=null;let uds='Nunca movimentado';if(movs.length){const ul=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});uds=ul.data||'—';const ud=parseDateBR(ul.data);if(ud)dp=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,dp,uds};}).filter(p=>p.dp===null||p.dp>=dias).sort((a,b)=>(b.dp||9999)-(a.dp||9999));const vp=ip.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);let h=`<div class="sumary"><div class="sc"><div class="sl">Itens Parados</div><div class="sv" style="color:#dc2626">${ip.length}</div></div><div class="sc"><div class="sl">Valor Parado</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(vp)}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Localização</th><th class="num">Qtd.</th><th class="num">Valor</th><th>Última Mov.</th><th>Dias</th></tr></thead><tbody>`;ip.forEach(p=>{const bc=p.dp===null||p.dp>=180?'be':p.dp>=90?'bw':'';h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px">${p.uds}</td><td><span class="badge ${bc}">${p.dp===null?'Nunca':p.dp+'d'}</span></td></tr>`;});if(!ip.length)h+=`<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:20px">✅ Nenhum item parado!</td></tr>`;h+=`</tbody></table>`;return h;}
   return '';
 }
+
+// ===================== LOG DE ATIVIDADES =====================
+let activityLog = [];
+
+function registrarLog(tipo, msg, icon='📌'){
+  const entry = {
+    tipo, msg, icon,
+    usuario: usuarioAtual?.nome || 'Sistema',
+    time: new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+  };
+  activityLog.unshift(entry);
+  if(activityLog.length > 200) activityLog = activityLog.slice(0, 200);
+  try { localStorage.setItem('muda_log', JSON.stringify(activityLog)); } catch(e){}
+}
+
+function carregarLog(){
+  try { activityLog = JSON.parse(localStorage.getItem('muda_log') || '[]'); } catch(e){ activityLog = []; }
+}
+
+function abrirLog(){
+  carregarLog();
+  renderLog();
+  document.getElementById('modal-log').classList.add('open');
+}
+
+function renderLog(){
+  const tipo = document.getElementById('log-filtro-tipo')?.value || '';
+  const fil = tipo ? activityLog.filter(l => l.tipo === tipo) : activityLog;
+  const el = document.getElementById('lista-log');
+  el.innerHTML = fil.length ? fil.map(l => `
+    <div class="log-item">
+      <div class="log-icon">${l.icon}</div>
+      <div class="log-info">
+        <div class="log-user">${l.usuario}</div>
+        <div class="log-msg">${l.msg}</div>
+        <div class="log-time">${l.time}</div>
+      </div>
+    </div>`).join('') : '<div class="empty">Nenhuma atividade registrada.</div>';
+}
+
+function limparLog(){
+  if(!confirm('Limpar todo o log de atividades?')) return;
+  activityLog = [];
+  try { localStorage.removeItem('muda_log'); } catch(e){}
+  renderLog();
+  showToast('Log limpo.');
+}
+
+// ===================== ORÇAMENTO DE PROJETOS =====================
+let orcamentoProjetoId = null;
+
+function abrirOrcamento(id){
+  if(!pode('editar')) return showToast('Sem permissão.','err');
+  orcamentoProjetoId = id;
+  const p = projetos.find(x => x.id === id);
+  if(!p) return;
+  document.getElementById('mo-title').textContent = '💰 Orçamento — ' + p.nome;
+  document.getElementById('mo-previsto').value = p.orcamentoPrevisto || '';
+  
+  // Calcular gasto real via saídas do histórico
+  const saidas = historico.filter(h => h.projeto === p.nome && h.tipo === 'saida');
+  const gastoReal = saidas.reduce((acc, h) => {
+    const prod = produtos.find(x => x.id == h.itemId);
+    return acc + (Number(prod?.custo || 0) * Number(h.quantidade || 0));
+  }, 0);
+  
+  document.getElementById('mo-gasto').value = gastoReal.toFixed(2);
+  
+  // Montar lista de materiais usados
+  const matMap = {};
+  saidas.forEach(h => {
+    const prod = produtos.find(x => x.id == h.itemId);
+    if(!matMap[h.itemId]) matMap[h.itemId] = {nome: h.itemNome, qty: 0, custo: Number(prod?.custo || 0), unidade: prod?.unidade || 'un'};
+    matMap[h.itemId].qty += Number(h.quantidade);
+  });
+  
+  const mats = Object.values(matMap);
+  const listaEl = document.getElementById('mo-materiais-lista');
+  if(mats.length) {
+    listaEl.innerHTML = `<div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Materiais utilizados</div>` +
+      mats.map(m => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
+        <span>${m.nome}</span>
+        <span style="color:#6b7280">${m.qty} ${m.unidade} × R$ ${m.custo.toFixed(2)} = <strong>R$ ${(m.qty * m.custo).toFixed(2)}</strong></span>
+      </div>`).join('');
+  } else {
+    listaEl.innerHTML = '<div style="color:#9ca3af;font-size:12px">Nenhuma saída registrada para este projeto ainda.</div>';
+  }
+  
+  calcularOrcamento();
+  document.getElementById('modal-orcamento').classList.add('open');
+}
+
+function calcularOrcamento(){
+  const previsto = Number(document.getElementById('mo-previsto').value || 0);
+  const gasto = Number(document.getElementById('mo-gasto').value || 0);
+  const barra = document.getElementById('mo-barra');
+  const fill = document.getElementById('mo-fill');
+  const pct = document.getElementById('mo-pct');
+  
+  if(previsto > 0){
+    barra.style.display = 'block';
+    const perc = Math.min(100, Math.round((gasto / previsto) * 100));
+    fill.style.width = perc + '%';
+    fill.style.background = perc >= 90 ? '#dc2626' : perc >= 70 ? '#d97706' : '#16a34a';
+    pct.textContent = perc + '%';
+    pct.style.color = perc >= 90 ? '#dc2626' : perc >= 70 ? '#d97706' : '#16a34a';
+  } else {
+    barra.style.display = 'none';
+  }
+}
+
+function salvarOrcamento(){
+  if(!orcamentoProjetoId) return;
+  const previsto = document.getElementById('mo-previsto').value;
+  projetos = projetos.map(p => p.id === orcamentoProjetoId ? {...p, orcamentoPrevisto: previsto} : p);
+  sl('muda_projetos', projetos);
+  showToast('Orçamento salvo!');
+  registrarLog('edicao', `Orçamento do projeto atualizado`, '💰');
+  fecharModal('modal-orcamento');
+  renderProjetos();
+}
+// ===================== FIM FASE 2B =====================
+
 </script>
 </body>
 </html>
