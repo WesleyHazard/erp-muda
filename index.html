@@ -176,6 +176,31 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .parado-badge{background:#f3f4f6;color:#6b7280;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
 .parado-badge.critico{background:#fef2f2;color:#dc2626}
 .parado-badge.atencao{background:#fffbeb;color:#d97706}
+/* ORDEM DE SERVIÇO */
+.os-header{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;border-radius:12px;padding:16px;margin-bottom:14px}
+.os-title{font-size:18px;font-weight:800}
+.os-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;opacity:.9}
+.os-prog{background:#fff2;border-radius:20px;height:8px;margin-top:10px;overflow:hidden}
+.os-prog-fill{height:100%;background:#fff;border-radius:20px;transition:width .3s}
+.mat-item{background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.mat-item.ok{border-color:#bbf7d0;background:#f0fdf4}
+.mat-item.faltando{border-color:#fecaca;background:#fffafa}
+.mat-item.substituido{border-color:#fde68a;background:#fffbeb}
+.mat-status-btn{border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.mat-status-btn.separado{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.mat-status-btn.faltando{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.mat-status-btn.substituido{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+.mat-status-btn.active-separado{background:#16a34a;color:#fff}
+.mat-status-btn.active-faltando{background:#dc2626;color:#fff}
+.mat-status-btn.active-substituido{background:#d97706;color:#fff}
+.proj-card-new{background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .2s,box-shadow .2s}
+.proj-card-new:hover{border-color:#16a34a;box-shadow:0 2px 8px #16a34a22}
+.proj-card-new.ativo{border-left:4px solid #16a34a}
+.proj-card-new.concluido{border-left:4px solid #2563eb}
+.proj-card-new.pausado{border-left:4px solid #d97706}
+.data-badge{background:#f0fdf4;color:#14532d;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700}
+.data-badge.vence{background:#fef2f2;color:#dc2626}
+
 /* BOTÃO X MODAL */
 .modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
 .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#9ca3af;line-height:1;padding:0;margin:0}
@@ -285,7 +310,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 
 <div class="modal-bg" id="modal-proj">
-<div class="modal">
+<div class="modal" style="max-width:560px">
   <div class="modal-header"><div class="modal-title" id="mp-title">Novo Projeto</div><button class="modal-close" onclick="fecharModal('modal-proj')">×</button></div>
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
     <div class="fg"><label>Nome do Projeto *</label><input type="text" id="mp-nome"></div>
@@ -293,10 +318,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div class="fg"><label>Cliente *</label><input type="text" id="mp-cliente"></div>
       <div class="fg"><label>Responsável</label><input type="text" id="mp-resp"></div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>📅 Data de Início</label><input type="date" id="mp-inicio"></div>
+      <div class="fg"><label>🚚 Data de Entrega</label><input type="date" id="mp-entrega"></div>
+    </div>
+    <div class="fg"><label>👷 Responsável pela Separação</label><input type="text" id="mp-sep" placeholder="Quem vai separar os materiais"></div>
     <div class="fg"><label>Status</label>
       <select id="mp-status"><option value="ativo">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select>
     </div>
-    <div class="fg"><label>Observações</label><input type="text" id="mp-obs"></div>
+    <div class="fg"><label>Observações Gerais</label><input type="text" id="mp-obs"></div>
     <div style="display:flex;gap:8px">
       <button class="btn-confirmar" onclick="salvarProjeto()">Salvar</button>
       <button class="btn-gray" onclick="fecharModal('modal-proj')">Cancelar</button>
@@ -402,6 +432,43 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <button class="btn-gray" onclick="fecharModal('modal-orcamento')">Fechar</button>
     </div>
   </div>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-os">
+<div class="modal" style="max-width:700px">
+  <div class="modal-header">
+    <div class="modal-title" id="mos-title">📋 Ordem de Serviço</div>
+    <button class="modal-close" onclick="fecharModal('modal-os')">×</button>
+  </div>
+  <div id="mos-header-info" style="margin:8px 0 12px"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="font-weight:700;font-size:13px;color:#14532d">📦 Lista de Materiais</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn-green" style="font-size:12px" onclick="abrirAddMaterial()">+ Adicionar Material</button>
+      <button class="btn-gray" style="font-size:12px" onclick="imprimirOS()">🖨️ Imprimir OS</button>
+    </div>
+  </div>
+  <div id="add-material-form" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="fg"><label>Material *</label><input type="text" id="mat-nome" placeholder="Nome do material"></div>
+      <div class="fg"><label>Qtd. Necessária *</label><input type="number" id="mat-qty" placeholder="0"></div>
+      <div class="fg"><label>Unidade</label><select id="mat-un"><option>un</option><option>m²</option><option>m</option><option>kg</option><option>g</option><option>L</option><option>ml</option><option>cx</option><option>pct</option><option>hastes</option><option>maços</option></select></div>
+    </div>
+    <div class="fg" style="margin-bottom:8px"><label>Observação</label><input type="text" id="mat-obs" placeholder="Ex: cor específica, tamanho, etc."></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-green" style="font-size:12px" onclick="salvarMaterial()">Adicionar</button>
+      <button class="btn-gray" style="font-size:12px" onclick="cancelarAddMaterial()">Cancelar</button>
+    </div>
+  </div>
+  <div id="mos-prog" style="margin-bottom:12px;display:none">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px">
+      <span id="mos-prog-label">0 de 0 itens separados</span>
+      <span id="mos-prog-pct" style="font-weight:700;color:#16a34a">0%</span>
+    </div>
+    <div class="proj-prog-bar"><div class="proj-prog-fill" id="mos-prog-fill" style="width:0%"></div></div>
+  </div>
+  <div id="lista-materiais"></div>
 </div>
 </div>
 <!-- SISTEMA -->
@@ -1058,12 +1125,95 @@ function renderHistorico(){
 function renderReposicao(){const q=document.getElementById('rep-search')?.value.toLowerCase()||'';const cat=document.getElementById('rep-cat')?.value||'';const showForn=document.getElementById('rcol-forn')?.checked!==false;const showLoc=document.getElementById('rcol-loc')?.checked!==false;const showFalta=document.getElementById('rcol-falta')?.checked!==false;const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo)&&(!cat||p.categoria===cat)&&(p.nome.toLowerCase().includes(q)));document.getElementById('lista-reposicao').innerHTML=baixo.length?baixo.map(p=>`<div class="repos-item"><div><div style="font-weight:600;font-size:13px">${p.nome}</div><div style="font-size:11px;color:#9ca3af">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}${showForn&&p.fornecedor?' · 🏭 '+p.fornecedor:''} ${showLoc&&p.localizacao?'· 📍 '+p.localizacao:''}</div></div><div style="text-align:right"><div style="font-weight:700;color:#dc2626">Saldo: ${p.quantidade} ${p.unidade}</div>${showFalta?`<div style="font-size:11px;color:#9ca3af">Mín: ${p.estoqueMinimo} · Falta: ~${Math.max(0,Number(p.estoqueMinimo)-Number(p.quantidade))}</div>`:''}</div></div>`).join(''):'<div class="empty">✅ Nenhum item precisa de reposição!</div>';}
 function exportarReposicao(){const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));if(!baixo.length)return showToast('Nenhum item para repor!');const txt='🌿 LISTA DE REPOSIÇÃO — MUDA PAISAGISMO\n📅 '+new Date().toLocaleDateString('pt-BR')+'\n\n'+baixo.map((p,i)=>`${i+1}. ${p.nome}\n   Saldo: ${p.quantidade} ${p.unidade} | Mínimo: ${p.estoqueMinimo}${p.fornecedor?'\n   Fornecedor: '+p.fornecedor:''}`).join('\n\n');navigator.clipboard.writeText(txt).then(()=>showToast('Lista copiada! ✅'));}
 
-function renderProjetos(){const q=document.getElementById('proj-search').value.toLowerCase();const sf=document.getElementById('proj-sf').value;const showResp=document.getElementById('pcol-resp')?.checked!==false;const showObs=document.getElementById('pcol-obs')?.checked!==false;const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;const fil=projetos.filter(p=>(!sf||p.status===sf)&&(p.nome.toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};const slc={ativo:'ps-ativo',concluido:'ps-concluido',pausado:'ps-pausado'};document.getElementById('lista-projetos').innerHTML=fil.length?fil.map(p=>`<div class="proj-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${p.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}</div></div><div style="display:flex;gap:6px;align-items:center"><span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>${pode('editar')?`<button class="btn-blue" onclick="abrirModalProj('${p.id}')">✏️</button>`:''}${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="abrirOrcamento('${p.id}')">💰</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarProj('${p.id}')">🗑️</button>`:''}</div></div>${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}${showSaidas?`<div style="font-size:12px;color:#374151;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center">
+function renderProjetos(){
+  const q=document.getElementById('proj-search').value.toLowerCase();
+  const sf=document.getElementById('proj-sf').value;
+  const showResp=document.getElementById('pcol-resp')?.checked!==false;
+  const showObs=document.getElementById('pcol-obs')?.checked!==false;
+  const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;
+  const fil=projetos.filter(p=>(!sf||p.status===sf)&&(p.nome.toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));
+  const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};
+  const slc={ativo:'ps-ativo',concluido:'ps-concluido',pausado:'ps-pausado'};
+  const hoje=new Date();
+  const fmtData=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'';
+  document.getElementById('lista-projetos').innerHTML=fil.length?fil.map(p=>{
+    const mats=p.materiais||[];
+    const sepCount=mats.filter(m=>m.status==='separado').length;
+    const faltCount=mats.filter(m=>m.status==='faltando').length;
+    const pct=mats.length?Math.round(sepCount/mats.length*100):0;
+    const entrega=p.dataEntrega?new Date(p.dataEntrega+'T00:00:00'):null;
+    const vencendo=entrega&&entrega<hoje&&p.status!=='concluido';
+    return `<div class="proj-card-new ${p.status||'ativo'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:15px">${p.nome}</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:3px">
+            👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}
+            ${p.responsavelSep?` · 👷 ${p.responsavelSep}`:''}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            ${p.dataInicio?`<span class="data-badge">📅 ${fmtData(p.dataInicio)}</span>`:''}
+            ${p.dataEntrega?`<span class="data-badge ${vencendo?'vence':''}">🚚 ${fmtData(p.dataEntrega)}${vencendo?' ⚠️':''}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+          <span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>
+          <button class="btn-green" style="font-size:11px;padding:5px 10px" onclick="abrirOS('${p.id}')">📋 OS</button>
+          ${pode('editar')?`<button class="btn-blue" onclick="abrirModalProj('${p.id}')">✏️</button>`:''}
+          ${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="abrirOrcamento('${p.id}')">💰</button>`:''}
+          ${pode('deletar')?`<button class="btn-red" onclick="deletarProj('${p.id}')">🗑️</button>`:''}
+        </div>
+      </div>
+      ${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}
+      ${mats.length>0?`<div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:4px">
+          <span>📦 ${sepCount}/${mats.length} separados ${faltCount>0?`· <span style="color:#dc2626;font-weight:700">❌ ${faltCount} faltando</span>`:''}</span>
+          <span style="font-weight:700;color:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}">${pct}%</span>
+        </div>
+        <div class="proj-prog-bar"><div class="proj-prog-fill" style="width:${pct}%;background:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}"></div></div>
+      </div>`:'<div style="font-size:11px;color:#9ca3af;margin-top:8px">Nenhum material cadastrado. Clique em 📋 OS para adicionar.</div>'}
+    </div>`;
+  }).join(''):'<div class="empty">Nenhum projeto encontrado.</div>';}<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${p.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}</div></div><div style="display:flex;gap:6px;align-items:center"><span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>${pode('editar')?`<button class="btn-blue" onclick="abrirModalProj('${p.id}')">✏️</button>`:''}${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="abrirOrcamento('${p.id}')">💰</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarProj('${p.id}')">🗑️</button>`:''}</div></div>${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}${showSaidas?`<div style="font-size:12px;color:#374151;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center">
         <span>📦 ${historico.filter(h=>h.projeto===p.nome&&h.tipo==="saida").length} saídas registradas</span>
         ${p.orcamentoPrevisto?`<span style="font-size:11px;color:#16a34a;font-weight:700">💰 Orç: R$ ${Number(p.orcamentoPrevisto).toLocaleString("pt-BR",{minimumFractionDigits:2})}</span>`:""}
       </div>`:""}`).join(''):'<div class="empty">Nenhum projeto encontrado.</div>';}
-function abrirModalProj(id){editProjId=id||null;const p=id?projetos.find(x=>x.id===id):null;document.getElementById('mp-title').textContent=p?'✏️ Editar Projeto':'➕ Novo Projeto';document.getElementById('mp-nome').value=p?.nome||'';document.getElementById('mp-cliente').value=p?.cliente||'';document.getElementById('mp-resp').value=p?.responsavel||'';document.getElementById('mp-status').value=p?.status||'ativo';document.getElementById('mp-obs').value=p?.obs||'';document.getElementById('modal-proj').classList.add('open');}
-function salvarProjeto(){const nome=document.getElementById('mp-nome').value.trim();const cliente=document.getElementById('mp-cliente').value.trim();if(!nome||!cliente)return showToast('Preencha nome e cliente.','err');const p={id:editProjId||Date.now().toString(),nome,cliente,responsavel:document.getElementById('mp-resp').value,status:document.getElementById('mp-status').value,obs:document.getElementById('mp-obs').value};projetos=editProjId?projetos.map(x=>x.id===editProjId?p:x):[...projetos,p];sl('muda_projetos',projetos);showToast(editProjId?'Projeto atualizado!':'Projeto cadastrado!');fecharModal('modal-proj');renderProjetos();popularMovSels();document.getElementById('st-proj').textContent=projetos.filter(p=>p.status==='ativo').length;}
+function abrirModalProj(id){
+  editProjId=id||null;
+  const p=id?projetos.find(x=>x.id===id):null;
+  document.getElementById('mp-title').textContent=p?'✏️ Editar Projeto':'➕ Novo Projeto';
+  document.getElementById('mp-nome').value=p?.nome||'';
+  document.getElementById('mp-cliente').value=p?.cliente||'';
+  document.getElementById('mp-resp').value=p?.responsavel||'';
+  document.getElementById('mp-inicio').value=p?.dataInicio||'';
+  document.getElementById('mp-entrega').value=p?.dataEntrega||'';
+  document.getElementById('mp-sep').value=p?.responsavelSep||'';
+  document.getElementById('mp-status').value=p?.status||'ativo';
+  document.getElementById('mp-obs').value=p?.obs||'';
+  document.getElementById('modal-proj').classList.add('open');
+}
+function salvarProjeto(){
+  const nome=document.getElementById('mp-nome').value.trim();
+  const cliente=document.getElementById('mp-cliente').value.trim();
+  if(!nome||!cliente)return showToast('Preencha nome e cliente.','err');
+  const existing=editProjId?projetos.find(x=>x.id===editProjId):null;
+  const p={
+    id:editProjId||Date.now().toString(),
+    nome,cliente,
+    responsavel:document.getElementById('mp-resp').value,
+    dataInicio:document.getElementById('mp-inicio').value,
+    dataEntrega:document.getElementById('mp-entrega').value,
+    responsavelSep:document.getElementById('mp-sep').value,
+    status:document.getElementById('mp-status').value,
+    obs:document.getElementById('mp-obs').value,
+    materiais:existing?.materiais||[]
+  };
+  projetos=editProjId?projetos.map(x=>x.id===editProjId?p:x):[...projetos,p];
+  sl('muda_projetos',projetos);
+  showToast(editProjId?'Projeto atualizado!':'Projeto cadastrado!');
+  registrarLog('edicao',`Projeto ${editProjId?'atualizado':'cadastrado'}: ${nome}`,'🏗️');
+  fecharModal('modal-proj');renderProjetos();popularMovSels();
+  document.getElementById('st-proj').textContent=projetos.filter(p=>p.status==='ativo').length;
+}
 function deletarProj(id){if(!confirm('Remover?'))return;projetos=projetos.filter(p=>p.id!==id);sl('muda_projetos',projetos);renderProjetos();showToast('Removido.');}
 
 function renderFornecedores(){const q=document.getElementById('forn-search').value.toLowerCase();const cf=document.getElementById('forn-cf').value;const showTel=document.getElementById('fcol-tel')?.checked!==false;const showEmail=document.getElementById('fcol-email')?.checked!==false;const showCat=document.getElementById('fcol-cat')?.checked!==false;const showObs=document.getElementById('fcol-obs')?.checked!==false;const fil=fornecedores.filter(f=>(!cf||f.categoria===cf)&&(f.nome.toLowerCase().includes(q)||(f.tel||'').toLowerCase().includes(q)));document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`<div class="forn-card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${f.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">${showTel&&f.tel?'📞 '+f.tel+' ':''}${showEmail&&f.email?'· ✉️ '+f.email+' ':''}${showCat&&f.categoria?'· '+CATS[f.categoria]?.icon+' '+CATS[f.categoria]?.label:''}</div>${showObs&&f.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">📝 ${f.obs}</div>`:''}</div><div style="display:flex;gap:6px">${pode('editar')?`<button class="btn-blue" onclick="abrirModalForn('${f.id}')">✏️</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarForn('${f.id}')">🗑️</button>`:''}</div></div>`).join(''):'<div class="empty">Nenhum fornecedor encontrado.</div>';}
@@ -1269,6 +1419,200 @@ function salvarOrcamento(){
   fecharModal('modal-orcamento');
   renderProjetos();
 }
+
+// ===================== ORDEM DE SERVIÇO =====================
+let osProjetoId = null;
+
+function abrirOS(id){
+  osProjetoId = id;
+  const p = projetos.find(x => x.id === id);
+  if(!p) return;
+  
+  document.getElementById('mos-title').textContent = '📋 OS — ' + p.nome;
+  
+  // Header info
+  const hoje = new Date();
+  const entrega = p.dataEntrega ? new Date(p.dataEntrega) : null;
+  const vencendo = entrega && entrega < hoje && p.status !== 'concluido';
+  const fmtData = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  
+  document.getElementById('mos-header-info').innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">
+      <span>👤 <strong>${p.cliente}</strong></span>
+      ${p.responsavel?`<span>🧑 ${p.responsavel}</span>`:''}
+      ${p.responsavelSep?`<span>👷 Sep: ${p.responsavelSep}</span>`:''}
+      ${p.dataInicio?`<span class="data-badge">📅 Início: ${fmtData(p.dataInicio)}</span>`:''}
+      ${p.dataEntrega?`<span class="data-badge ${vencendo?'vence':''}">🚚 Entrega: ${fmtData(p.dataEntrega)}${vencendo?' ⚠️':''}</span>`:''}
+      ${p.obs?`<span style="color:#6b7280">📝 ${p.obs}</span>`:''}
+    </div>`;
+  
+  cancelarAddMaterial();
+  renderMateriais(p);
+  document.getElementById('modal-os').classList.add('open');
+}
+
+function renderMateriais(p){
+  const mats = p.materiais || [];
+  const prog = document.getElementById('mos-prog');
+  
+  if(mats.length > 0){
+    prog.style.display = 'block';
+    const separados = mats.filter(m => m.status === 'separado').length;
+    const pct = Math.round((separados / mats.length) * 100);
+    document.getElementById('mos-prog-label').textContent = `${separados} de ${mats.length} itens separados`;
+    document.getElementById('mos-prog-pct').textContent = pct + '%';
+    const fill = document.getElementById('mos-prog-fill');
+    fill.style.width = pct + '%';
+    fill.style.background = pct === 100 ? '#16a34a' : pct >= 50 ? '#d97706' : '#dc2626';
+  } else {
+    prog.style.display = 'none';
+  }
+  
+  const statusLabel = {separado:'✅ Separado', faltando:'❌ Faltando', substituido:'🔄 Substituído', pendente:'⏳ Pendente'};
+  const statusClass = {separado:'ok', faltando:'faltando', substituido:'substituido', pendente:''};
+  
+  document.getElementById('lista-materiais').innerHTML = mats.length ? mats.map((m,i) => `
+    <div class="mat-item ${statusClass[m.status||'pendente']}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="flex:1;min-width:140px">
+          <div style="font-weight:700;font-size:13px">${m.nome}</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">
+            Qtd: <strong>${m.qty} ${m.unidade}</strong>
+            ${m.obs?` · 💬 ${m.obs}`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <button class="mat-status-btn separado ${m.status==='separado'?'active-separado':''}" onclick="setMatStatus('${osProjetoId}',${i},'separado')">✅ Separado</button>
+          <button class="mat-status-btn faltando ${m.status==='faltando'?'active-faltando':''}" onclick="setMatStatus('${osProjetoId}',${i},'faltando')">❌ Faltando</button>
+          <button class="mat-status-btn substituido ${m.status==='substituido'?'active-substituido':''}" onclick="setMatStatus('${osProjetoId}',${i},'substituido')">🔄 Substituído</button>
+          ${pode('editar')?`<button class="btn-gray" style="font-size:11px;padding:3px 7px" onclick="editarObsMat('${osProjetoId}',${i})">💬</button>`:''}
+          ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerMat('${osProjetoId}',${i})">🗑️</button>`:''}
+        </div>
+      </div>
+      <div id="obs-edit-${i}" style="display:none;margin-top:8px">
+        <input type="text" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:12px" 
+          placeholder="Observação sobre este item..." value="${m.obs||''}"
+          onblur="salvarObsMat('${osProjetoId}',${i},this.value)">
+      </div>
+    </div>`).join('') 
+    : '<div class="empty" style="padding:24px">Nenhum material adicionado. Clique em "+ Adicionar Material" para começar.</div>';
+}
+
+function setMatStatus(projId, idx, status){
+  const p = projetos.find(x => x.id === projId);
+  if(!p || !p.materiais) return;
+  p.materiais[idx].status = p.materiais[idx].status === status ? 'pendente' : status;
+  sl('muda_projetos', projetos);
+  renderMateriais(p);
+  renderProjetos();
+}
+
+function editarObsMat(projId, idx){
+  const el = document.getElementById('obs-edit-'+idx);
+  if(el) { el.style.display = el.style.display === 'none' ? 'block' : 'none'; if(el.style.display==='block') el.querySelector('input').focus(); }
+}
+
+function salvarObsMat(projId, idx, val){
+  const p = projetos.find(x => x.id === projId);
+  if(!p || !p.materiais) return;
+  p.materiais[idx].obs = val;
+  sl('muda_projetos', projetos);
+  renderMateriais(p);
+}
+
+function removerMat(projId, idx){
+  if(!confirm('Remover este material?')) return;
+  const p = projetos.find(x => x.id === projId);
+  if(!p) return;
+  p.materiais.splice(idx, 1);
+  sl('muda_projetos', projetos);
+  renderMateriais(p);
+  renderProjetos();
+}
+
+function abrirAddMaterial(){
+  document.getElementById('add-material-form').style.display = 'block';
+  document.getElementById('mat-nome').focus();
+}
+
+function cancelarAddMaterial(){
+  document.getElementById('add-material-form').style.display = 'none';
+  document.getElementById('mat-nome').value = '';
+  document.getElementById('mat-qty').value = '';
+  document.getElementById('mat-obs').value = '';
+  document.getElementById('mat-un').value = 'un';
+}
+
+function salvarMaterial(){
+  const nome = document.getElementById('mat-nome').value.trim();
+  const qty = document.getElementById('mat-qty').value;
+  if(!nome || !qty) return showToast('Preencha o material e a quantidade.','err');
+  const p = projetos.find(x => x.id === osProjetoId);
+  if(!p) return;
+  if(!p.materiais) p.materiais = [];
+  p.materiais.push({
+    nome,
+    qty: Number(qty),
+    unidade: document.getElementById('mat-un').value,
+    obs: document.getElementById('mat-obs').value,
+    status: 'pendente'
+  });
+  sl('muda_projetos', projetos);
+  cancelarAddMaterial();
+  renderMateriais(p);
+  renderProjetos();
+  showToast('Material adicionado!');
+}
+
+function imprimirOS(){
+  const p = projetos.find(x => x.id === osProjetoId);
+  if(!p) return;
+  const fmtData = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const statusLabel = {separado:'✅ Separado', faltando:'❌ Faltando', substituido:'🔄 Substituído', pendente:'⏳ Pendente'};
+  const mats = p.materiais || [];
+  const separados = mats.filter(m => m.status === 'separado').length;
+  
+  const win = window.open('','_blank','width=900,height=700');
+  win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>OS — ${p.nome}</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',sans-serif;color:#1a1a1a;padding:24px;font-size:13px}
+  .hdr{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;border-radius:10px;padding:16px;margin-bottom:20px}
+  .hdr-title{font-size:20px;font-weight:800}.hdr-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;opacity:.9}
+  .prog{background:#ffffff44;border-radius:20px;height:8px;margin-top:10px;overflow:hidden}
+  .prog-fill{height:100%;background:#fff;border-radius:20px}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{background:#f0fdf4;color:#14532d;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:11px}
+  td{padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}
+  .badge{border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
+  .sep{background:#f0fdf4;color:#16a34a}.falt{background:#fef2f2;color:#dc2626}
+  .subs{background:#fffbeb;color:#d97706}.pend{background:#f3f4f6;color:#6b7280}
+  .footer{margin-top:20px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
+  @media print{button{display:none!important}}</style></head><body>
+  <div class="hdr">
+    <div class="hdr-title">📋 Ordem de Serviço — ${p.nome}</div>
+    <div class="hdr-meta">
+      <span>👤 Cliente: ${p.cliente}</span>
+      ${p.responsavel?`<span>🧑 Resp: ${p.responsavel}</span>`:''}
+      ${p.responsavelSep?`<span>👷 Separação: ${p.responsavelSep}</span>`:''}
+      ${p.dataInicio?`<span>📅 Início: ${fmtData(p.dataInicio)}</span>`:''}
+      ${p.dataEntrega?`<span>🚚 Entrega: ${fmtData(p.dataEntrega)}</span>`:''}
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:${mats.length?Math.round(separados/mats.length*100):0}%"></div></div>
+    <div style="font-size:11px;margin-top:4px;opacity:.9">${separados} de ${mats.length} itens separados</div>
+  </div>
+  ${p.obs?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">📝 ${p.obs}</div>`:''}
+  <table><thead><tr><th>#</th><th>Material</th><th>Qtd. Necessária</th><th>Status</th><th>Observação</th></tr></thead><tbody>
+  ${mats.map((m,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${m.nome}</td><td>${m.qty} ${m.unidade}</td>
+    <td><span class="badge ${m.status==='separado'?'sep':m.status==='faltando'?'falt':m.status==='substituido'?'subs':'pend'}">${statusLabel[m.status||'pendente']}</span></td>
+    <td style="color:#6b7280">${m.obs||'—'}</td></tr>`).join('')}
+  ${!mats.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Nenhum material cadastrado.</td></tr>':''}
+  </tbody></table>
+  <div class="footer">Muda Paisagismo · OS gerada em ${new Date().toLocaleString('pt-BR')} · Por ${usuarioAtual?.nome||'—'}</div>
+  <br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
+  </body></html>`);
+  win.document.close();
+}
+// ===================== FIM OS =====================
+
 // ===================== FIM FASE 2B =====================
 
 </script>
