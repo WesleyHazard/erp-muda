@@ -1084,7 +1084,7 @@ function lso(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch{retur
 function getUsuarios(){try{const u=JSON.parse(localStorage.getItem('muda_usuarios')||'null');return u||USUARIOS}catch{return USUARIOS}}
 function saveUsuarios(u){sl('muda_usuarios',u)}
 
-function fazerLogin(){
+async function fazerLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const senha=document.getElementById('login-senha').value;
   document.getElementById('login-error').style.display='none';
@@ -1103,7 +1103,7 @@ function fazerLogin(){
   aplicarPermissoes();
   carregarLog();
   carregarCategorias();
-  await carregarModulos();
+  carregarModulos();
   carregarUnidades();
   aplicarAparencia();
   registrarLog('login', `Login realizado`, '🔐');
@@ -1817,7 +1817,7 @@ let motivosSaida = ['Projeto de cliente','Manutenção','Descarte','Transferênc
 
 function initConfiguracoes(){
   carregarCategorias();
-  await carregarModulos();
+  carregarModulos();
   carregarUnidades();
   renderCategorias();
   renderMotivos();
