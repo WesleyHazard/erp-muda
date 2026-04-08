@@ -929,7 +929,6 @@ function fazerLogin(){
   const perfil=lso('perfil_'+u.email);
   if(perfil.foto)document.getElementById('header-avatar').innerHTML=`<img src="${perfil.foto}">`;
   aplicarPermissoes();
-  projetos=ls('muda_projetos');fornecedores=ls('muda_fornecedores');
   carregarLog();
   registrarLog('login', `Login realizado`, '🔐');
   carregarDados();
@@ -1014,7 +1013,12 @@ function getItensParados(){
 async function api(p){const r=await fetch(API+'?'+new URLSearchParams(p));return r.json();}
 async function carregarDados(){
   try{
-    [produtos,historico]=await Promise.all([api({action:'getProdutos'}),api({action:'getMovimentacoes'})]);
+    [produtos,historico,projetos,fornecedores]=await Promise.all([
+      api({action:'getProdutos'}),
+      api({action:'getMovimentacoes'}),
+      api({action:'getProjetos'}),
+      api({action:'getFornecedores'})
+    ]);
     renderDashboard();renderEstoque();popularMovSels();renderMovHistResumo();renderMovBaixo();gerarNotificacoes();
   }catch(e){showToast('Erro ao carregar dados.','err');}
 }
@@ -1188,7 +1192,7 @@ function abrirModalProj(id){
   document.getElementById('mp-obs').value=p?.obs||'';
   document.getElementById('modal-proj').classList.add('open');
 }
-function salvarProjeto(){
+async function salvarProjeto(){
   const nome=document.getElementById('mp-nome').value.trim();
   const cliente=document.getElementById('mp-cliente').value.trim();
   if(!nome||!cliente)return showToast('Preencha nome e cliente.','err');
@@ -1202,25 +1206,37 @@ function salvarProjeto(){
     responsavelSep:document.getElementById('mp-sep').value,
     status:document.getElementById('mp-status').value,
     obs:document.getElementById('mp-obs').value,
-    materiais:existing?.materiais||[]
+    materiais:JSON.stringify(existing?.materiais||[])
   };
-  projetos=editProjId?projetos.map(x=>x.id===editProjId?p:x):[...projetos,p];
-  sl('muda_projetos',projetos);
-  showToast(editProjId?'Projeto atualizado!':'Projeto cadastrado!');
-  registrarLog('edicao',`Projeto ${editProjId?'atualizado':'cadastrado'}: ${nome}`,'🏗️');
-  fecharModal('modal-proj');renderProjetos();popularMovSels();
-  document.getElementById('st-proj').textContent=projetos.filter(p=>p.status==='ativo').length;
+  try{
+    if(editProjId){await api({action:'editProjeto',...p});}
+    else{const r=await api({action:'addProjeto',...p});p.id=r.id||p.id;}
+    showToast(editProjId?'Projeto atualizado!':'Projeto cadastrado!');
+    registrarLog('edicao',`Projeto ${editProjId?'atualizado':'cadastrado'}: ${nome}`,'🏗️');
+    fecharModal('modal-proj');
+    await carregarDados();
+    popularMovSels();
+  }catch(e){showToast('Erro ao salvar projeto.','err');}
 }
-function deletarProj(id){if(!confirm('Remover?'))return;projetos=projetos.filter(p=>p.id!==id);sl('muda_projetos',projetos);renderProjetos();showToast('Removido.');}
+async function deletarProj(id){if(!confirm('Remover?'))return;try{await api({action:'deleteProjeto',id});showToast('Removido.');registrarLog('exclusao','Projeto removido','🗑️');await carregarDados();}catch(e){showToast('Erro.','err');}}
 
 function renderFornecedores(){const q=document.getElementById('forn-search').value.toLowerCase();const cf=document.getElementById('forn-cf').value;const showTel=document.getElementById('fcol-tel')?.checked!==false;const showEmail=document.getElementById('fcol-email')?.checked!==false;const showCat=document.getElementById('fcol-cat')?.checked!==false;const showObs=document.getElementById('fcol-obs')?.checked!==false;const fil=fornecedores.filter(f=>(!cf||f.categoria===cf)&&(f.nome.toLowerCase().includes(q)||(f.tel||'').toLowerCase().includes(q)));document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`<div class="forn-card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${f.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">${showTel&&f.tel?'📞 '+f.tel+' ':''}${showEmail&&f.email?'· ✉️ '+f.email+' ':''}${showCat&&f.categoria?'· '+CATS[f.categoria]?.icon+' '+CATS[f.categoria]?.label:''}</div>${showObs&&f.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">📝 ${f.obs}</div>`:''}</div><div style="display:flex;gap:6px">${pode('editar')?`<button class="btn-blue" onclick="abrirModalForn('${f.id}')">✏️</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarForn('${f.id}')">🗑️</button>`:''}</div></div>`).join(''):'<div class="empty">Nenhum fornecedor encontrado.</div>';}
 function abrirModalForn(id){editFornId=id||null;const f=id?fornecedores.find(x=>x.id===id):null;document.getElementById('mf-title').textContent=f?'✏️ Editar Fornecedor':'➕ Novo Fornecedor';document.getElementById('mf-nome').value=f?.nome||'';document.getElementById('mf-tel').value=f?.tel||'';document.getElementById('mf-email').value=f?.email||'';document.getElementById('mf-cat').value=f?.categoria||'';document.getElementById('mf-obs').value=f?.obs||'';document.getElementById('modal-forn').classList.add('open');}
-function salvarFornecedor(){const nome=document.getElementById('mf-nome').value.trim();if(!nome)return showToast('Informe o nome.','err');const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};fornecedores=editFornId?fornecedores.map(x=>x.id===editFornId?f:x):[...fornecedores,f];sl('muda_fornecedores',fornecedores);showToast(editFornId?'Atualizado!':'Cadastrado!');fecharModal('modal-forn');renderFornecedores();}
-function deletarForn(id){if(!confirm('Remover?'))return;fornecedores=fornecedores.filter(f=>f.id!==id);sl('muda_fornecedores',fornecedores);renderFornecedores();showToast('Removido.');}
+async function salvarFornecedor(){const nome=document.getElementById('mf-nome').value.trim();if(!nome)return showToast('Informe o nome.','err');const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};try{if(editFornId){await api({action:'editFornecedor',...f});}else{await api({action:'addFornecedor',...f});}showToast(editFornId?'Atualizado!':'Cadastrado!');registrarLog('cadastro',`Fornecedor ${editFornId?'atualizado':'cadastrado'}: ${nome}`,'🏭');fecharModal('modal-forn');await carregarDados();}catch(e){showToast('Erro ao salvar.','err');}}
+async function deletarForn(id){if(!confirm('Remover?'))return;try{await api({action:'deleteFornecedor',id});showToast('Removido.');await carregarDados();}catch(e){showToast('Erro.','err');}}
 
 function abrirPerfil(){const perfil=lso('perfil_'+usuarioAtual.email);document.getElementById('perf-nome').value=perfil.nome||usuarioAtual.nome;document.getElementById('perf-cargo').value=perfil.cargo||'';document.getElementById('perf-tel').value=perfil.tel||'';document.getElementById('perf-email').value=usuarioAtual.email;document.getElementById('perfil-avatar-inicial').textContent=usuarioAtual.nome[0];if(perfil.foto)document.getElementById('perfil-avatar-display').innerHTML=`<img src="${perfil.foto}">`;if(usuarioAtual.nivel==='admin'){document.getElementById('secao-usuarios').style.display='block';renderUsuariosPerfil();}document.getElementById('modal-perfil').classList.add('open');}
 function carregarFotoPerfil(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{const foto=ev.target.result;document.getElementById('perfil-avatar-display').innerHTML=`<img src="${foto}">`;const perfil=lso('perfil_'+usuarioAtual.email);perfil.foto=foto;localStorage.setItem('perfil_'+usuarioAtual.email,JSON.stringify(perfil));document.getElementById('header-avatar').innerHTML=`<img src="${foto}">`;showToast('Foto atualizada!');};reader.readAsDataURL(file);}
-function salvarPerfil(){const perfil=lso('perfil_'+usuarioAtual.email);perfil.nome=document.getElementById('perf-nome').value;perfil.cargo=document.getElementById('perf-cargo').value;perfil.tel=document.getElementById('perf-tel').value;localStorage.setItem('perfil_'+usuarioAtual.email,JSON.stringify(perfil));document.getElementById('user-nome-badge').textContent=perfil.nome||usuarioAtual.nome;showToast('Perfil salvo!');}
+async function salvarPerfil(){
+  const perfil=lso('perfil_'+usuarioAtual.email);
+  perfil.nome=document.getElementById('perf-nome').value;
+  perfil.cargo=document.getElementById('perf-cargo').value;
+  perfil.tel=document.getElementById('perf-tel').value;
+  localStorage.setItem('perfil_'+usuarioAtual.email,JSON.stringify(perfil));
+  try{await api({action:'savePerfil',email:usuarioAtual.email,nome:perfil.nome||'',cargo:perfil.cargo||'',tel:perfil.tel||'',foto:perfil.foto||''});}catch(e){}
+  document.getElementById('user-nome-badge').textContent=perfil.nome||usuarioAtual.nome;
+  showToast('Perfil salvo!');
+}
 function renderUsuariosPerfil(){const usuarios=getUsuarios().filter(u=>u.ativo!=='nao');const nivelLabel={admin:'👑 Admin',operacional:'👷 Operacional',visualizador:'👁️ Visualizador'};const nivelCor={admin:'#fbbf24',operacional:'#60a5fa',visualizador:'#a78bfa'};document.getElementById('lista-usuarios-perfil').innerHTML=usuarios.map(u=>`<div class="usu-card"><div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:50%;background:#f0fdf4;border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;font-weight:700;color:#16a34a">${u.nome[0]}</div><div><div style="font-weight:700;font-size:13px">${u.nome}</div><div style="font-size:11px;color:#6b7280">${u.email}</div></div></div><div style="display:flex;align-items:center;gap:6px"><span style="background:${nivelCor[u.nivel]}22;color:${nivelCor[u.nivel]};border:1px solid ${nivelCor[u.nivel]}44;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">${nivelLabel[u.nivel]||u.nivel}</span>${u.email!==usuarioAtual.email?`<button class="btn-blue" style="font-size:11px;padding:3px 7px" onclick="editarUsuario('${u.id}')">✏️</button><button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerUsuario('${u.id}','${u.nome}')">🗑️</button>`:'<span style="font-size:11px;color:#9ca3af">Você</span>'}</div></div>`).join('');}
 function abrirFormUsuario(){editUsuId=null;['nu-nome','nu-email','nu-senha'].forEach(id=>document.getElementById(id).value='');document.getElementById('nu-nivel').value='operacional';document.getElementById('form-usuario').style.display='block';}
 function cancelarFormUsuario(){document.getElementById('form-usuario').style.display='none';editUsuId=null;}
@@ -1410,7 +1426,8 @@ function salvarOrcamento(){
   if(!orcamentoProjetoId) return;
   const previsto = document.getElementById('mo-previsto').value;
   projetos = projetos.map(p => p.id === orcamentoProjetoId ? {...p, orcamentoPrevisto: previsto} : p);
-  sl('muda_projetos', projetos);
+  // sync to sheets in background
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
   showToast('Orçamento salvo!');
   registrarLog('edicao', `Orçamento do projeto atualizado`, '💰');
   fecharModal('modal-orcamento');
@@ -1499,7 +1516,8 @@ function setMatStatus(projId, idx, status){
   const p = projetos.find(x => x.id === projId);
   if(!p || !p.materiais) return;
   p.materiais[idx].status = p.materiais[idx].status === status ? 'pendente' : status;
-  sl('muda_projetos', projetos);
+  // sync to sheets in background
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
   renderMateriais(p);
   renderProjetos();
 }
@@ -1513,7 +1531,8 @@ function salvarObsMat(projId, idx, val){
   const p = projetos.find(x => x.id === projId);
   if(!p || !p.materiais) return;
   p.materiais[idx].obs = val;
-  sl('muda_projetos', projetos);
+  // sync to sheets in background
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
   renderMateriais(p);
 }
 
@@ -1522,7 +1541,8 @@ function removerMat(projId, idx){
   const p = projetos.find(x => x.id === projId);
   if(!p) return;
   p.materiais.splice(idx, 1);
-  sl('muda_projetos', projetos);
+  // sync to sheets in background
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
   renderMateriais(p);
   renderProjetos();
 }
@@ -1554,7 +1574,8 @@ function salvarMaterial(){
     obs: document.getElementById('mat-obs').value,
     status: 'pendente'
   });
-  sl('muda_projetos', projetos);
+  // sync to sheets in background
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
   cancelarAddMaterial();
   renderMateriais(p);
   renderProjetos();
