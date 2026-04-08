@@ -176,6 +176,22 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .parado-badge{background:#f3f4f6;color:#6b7280;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
 .parado-badge.critico{background:#fef2f2;color:#dc2626}
 .parado-badge.atencao{background:#fffbeb;color:#d97706}
+/* MÓDULOS */
+.modulo-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.modulo-card.ativo{border-color:#16a34a;background:#f0fdf4}
+.modulo-icon{font-size:24px;min-width:32px;text-align:center}
+.modulo-info{flex:1}
+.modulo-nome{font-weight:700;font-size:13px}
+.modulo-desc{font-size:11px;color:#6b7280;margin-top:2px}
+.toggle-switch{position:relative;width:44px;height:24px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:24px;transition:.3s}
+.toggle-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:#16a34a}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(20px)}
+.config-badge{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700}
+.config-badge.warn{background:#fffbeb;color:#d97706;border-color:#fde68a}
+
 /* CONFIGURAÇÕES */
 .config-section{background:#fff;border-radius:12px;padding:20px;border:1px solid #e5e7eb;margin-bottom:14px}
 .config-section-title{font-weight:700;font-size:14px;color:#14532d;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -888,10 +904,21 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <!-- CONFIGURAÇÕES -->
 <div class="section" id="sec-configuracoes">
-  <div class="config-section">
+
+  <!-- TABS DE CONFIGURAÇÃO -->
+  <div class="config-tabs">
+    <button class="config-tab active" onclick="switchConfigTab('categorias',this)">🏷️ Categorias</button>
+    <button class="config-tab" onclick="switchConfigTab('motivos',this)">📋 Motivos</button>
+    <button class="config-tab" onclick="switchConfigTab('modulos',this)">🗂️ Módulos</button>
+    <button class="config-tab" onclick="switchConfigTab('alertas',this)">🔔 Alertas</button>
+    <button class="config-tab" onclick="switchConfigTab('unidades',this)">📦 Unidades</button>
+    <button class="config-tab" onclick="switchConfigTab('aparencia',this)">🎨 Aparência</button>
+  </div>
+
+  <!-- CATEGORIAS -->
+  <div class="config-section" id="cfg-categorias">
     <div class="config-section-title">🏷️ Gerenciar Categorias</div>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">As categorias são usadas no estoque e nos fornecedores. Você pode adicionar, editar ou remover categorias livremente.</p>
-    
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">Categorias usadas no estoque e fornecedores. Crie quantas precisar!</p>
     <div id="form-nova-cat" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:14px">
       <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:10px" id="form-cat-title">➕ Nova Categoria</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -908,7 +935,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <button class="btn-gray" onclick="cancelarCategoria()">Cancelar</button>
       </div>
     </div>
-
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <span class="count-lbl" id="cat-count"></span>
       <button class="btn-green" onclick="abrirFormCategoria()">+ Nova Categoria</button>
@@ -916,7 +942,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <div id="lista-categorias"></div>
   </div>
 
-  <div class="config-section">
+  <!-- MOTIVOS -->
+  <div class="config-section" id="cfg-motivos" style="display:none">
     <div class="config-section-title">📋 Motivos de Movimentação</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div>
@@ -937,6 +964,88 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       </div>
     </div>
   </div>
+
+  <!-- MÓDULOS -->
+  <div class="config-section" id="cfg-modulos" style="display:none">
+    <div class="config-section-title">🗂️ Gerenciar Módulos</div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">Ative ou desative módulos do sistema. Novos módulos criam automaticamente uma aba no menu e no Google Sheets.</p>
+    <div id="form-novo-modulo" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:10px">➕ Novo Módulo</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="fg"><label>Nome do Módulo *</label><input type="text" id="mod-nome" placeholder="Ex: Logística"></div>
+        <div class="fg"><label>Ícone (emoji)</label><input type="text" id="mod-icon" placeholder="🚚" maxlength="4"></div>
+      </div>
+      <div class="fg" style="margin-bottom:10px"><label>Descrição</label><input type="text" id="mod-desc" placeholder="Ex: Controle de entregas e pedidos"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-green" onclick="salvarModulo()">Criar Módulo</button>
+        <button class="btn-gray" onclick="document.getElementById('form-novo-modulo').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span class="count-lbl" id="mod-count"></span>
+      <button class="btn-green" onclick="document.getElementById('form-novo-modulo').style.display='block'">+ Novo Módulo</button>
+    </div>
+    <div id="lista-modulos"></div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="config-section" id="cfg-alertas" style="display:none">
+    <div class="config-section-title">🔔 Configurar Alertas</div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">Defina os limites para geração de alertas automáticos no sistema.</p>
+    <div class="alert-card">
+      <div><div class="alert-label">😴 Dias para item parado</div><div class="alert-desc">Alertar quando um item ficar X dias sem movimentação</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" class="alert-input" id="alerta-dias-parado" value="30" min="1" max="365">
+        <span style="font-size:12px;color:#6b7280">dias</span>
+      </div>
+    </div>
+    <div class="alert-card">
+      <div><div class="alert-label">⚠️ Limite de estoque baixo</div><div class="alert-desc">Alertar quando estoque atingir o mínimo cadastrado</div></div>
+      <div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="alerta-estoque-baixo" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="alert-card">
+      <div><div class="alert-label">🚚 Alerta de prazo de entrega</div><div class="alert-desc">Alertar X dias antes do prazo de entrega do projeto</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" class="alert-input" id="alerta-prazo-proj" value="3" min="1" max="30">
+        <span style="font-size:12px;color:#6b7280">dias antes</span>
+      </div>
+    </div>
+    <button class="btn-green" style="margin-top:12px" onclick="salvarAlertas()">💾 Salvar Alertas</button>
+  </div>
+
+  <!-- UNIDADES -->
+  <div class="config-section" id="cfg-unidades" style="display:none">
+    <div class="config-section-title">📦 Unidades de Medida</div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">Gerencie as unidades disponíveis no cadastro de itens.</p>
+    <div id="lista-unidades" style="margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="nova-unidade" placeholder="Nova unidade (ex: caixa)..." style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px">
+      <button class="btn-green" style="font-size:12px;padding:7px 12px" onclick="adicionarUnidade()">+</button>
+    </div>
+  </div>
+
+  <!-- APARÊNCIA -->
+  <div class="config-section" id="cfg-aparencia" style="display:none">
+    <div class="config-section-title">🎨 Aparência do Sistema</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="fg"><label>Nome da Empresa</label><input type="text" id="ap-empresa" placeholder="Muda Paisagismo"></div>
+      <div class="fg"><label>Slogan / Subtítulo</label><input type="text" id="ap-slogan" placeholder="Sistema ERP · Controle de Estoque"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg"><label>Cor Principal</label><input type="color" id="ap-cor-principal" value="#16a34a" style="height:38px;padding:2px"></div>
+        <div class="fg"><label>Cor Escura</label><input type="color" id="ap-cor-escura" value="#14532d" style="height:38px;padding:2px"></div>
+      </div>
+      <div style="background:#f3f4f6;border-radius:10px;padding:12px;font-size:12px;color:#6b7280">
+        💡 A prévia das cores aparece após salvar e recarregar a página.
+      </div>
+      <button class="btn-green" onclick="salvarAparencia()">💾 Salvar Aparência</button>
+    </div>
+  </div>
+
 </div>
 
 
@@ -994,6 +1103,9 @@ function fazerLogin(){
   aplicarPermissoes();
   carregarLog();
   carregarCategorias();
+  carregarModulos();
+  carregarUnidades();
+  aplicarAparencia();
   registrarLog('login', `Login realizado`, '🔐');
   carregarDados();
   const params=new URLSearchParams(window.location.search);
@@ -1705,8 +1817,13 @@ let motivosSaida = ['Projeto de cliente','Manutenção','Descarte','Transferênc
 
 function initConfiguracoes(){
   carregarCategorias();
+  carregarModulos();
+  carregarUnidades();
   renderCategorias();
   renderMotivos();
+  atualizarTabsModulos();
+  // Reset to first tab
+  switchConfigTab('categorias', document.querySelector('.config-tab'));
 }
 
 function carregarCategorias(){
@@ -1866,6 +1983,237 @@ function removerMotivo(tipo, idx){
   }
   renderMotivos();
 }
+
+// ===================== CONFIG TABS =====================
+function switchConfigTab(tab, el){
+  document.querySelectorAll('.config-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  ['categorias','motivos','modulos','alertas','unidades','aparencia'].forEach(t=>{
+    const el=document.getElementById('cfg-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+  });
+  if(tab==='modulos') renderModulos();
+  if(tab==='unidades') renderUnidades();
+  if(tab==='alertas') carregarAlertas();
+  if(tab==='aparencia') carregarAparencia();
+}
+
+// ===================== MÓDULOS =====================
+let modulos = [];
+
+function carregarModulos(){
+  try{
+    const saved = localStorage.getItem('muda_modulos');
+    if(saved) modulos = JSON.parse(saved);
+    else modulos = [
+      {id:'logistica', nome:'Logística', icon:'🚚', desc:'Controle de entregas e pedidos', ativo:false},
+      {id:'manutencao', nome:'Manutenção', icon:'🔧', desc:'Manutenção de equipamentos e ferramentas', ativo:false},
+      {id:'viveiro', nome:'Viveiro', icon:'🌱', desc:'Controle de mudas em produção', ativo:false},
+      {id:'agenda', nome:'Agenda', icon:'📅', desc:'Calendário de projetos e visitas', ativo:false},
+    ];
+  }catch(e){ modulos = []; }
+}
+
+function salvarModulosLocal(){
+  localStorage.setItem('muda_modulos', JSON.stringify(modulos));
+  atualizarTabsModulos();
+}
+
+function atualizarTabsModulos(){
+  // Remove existing module tabs
+  document.querySelectorAll('.tab-modulo').forEach(t=>t.remove());
+  document.querySelectorAll('.section-modulo').forEach(s=>s.remove());
+  
+  // Add active module tabs
+  const tabsInner = document.querySelector('.tabs-inner');
+  const mainDiv = document.querySelector('.main');
+  
+  modulos.filter(m=>m.ativo).forEach(m=>{
+    // Add tab button
+    const btn = document.createElement('button');
+    btn.className = 'tab tab-modulo';
+    btn.innerHTML = `${m.icon} ${m.nome}`;
+    btn.onclick = function(){ switchTab('mod-'+m.id, this); };
+    tabsInner.appendChild(btn);
+    
+    // Add section
+    const sec = document.createElement('div');
+    sec.className = 'section section-modulo';
+    sec.id = 'sec-mod-'+m.id;
+    sec.innerHTML = `
+      <div class="card">
+        <div class="card-title">${m.icon} ${m.nome}</div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">
+          💡 Módulo em desenvolvimento. Em breve você poderá personalizar os campos e funcionalidades deste módulo nas Configurações.
+        </div>
+      </div>`;
+    mainDiv.appendChild(sec);
+  });
+}
+
+function renderModulos(){
+  const lista = document.getElementById('lista-modulos');
+  const count = document.getElementById('mod-count');
+  count.textContent = modulos.length + ' módulos disponíveis';
+  
+  lista.innerHTML = modulos.map((m,i) => `
+    <div class="modulo-card ${m.ativo?'ativo':''}">
+      <div class="modulo-icon">${m.icon}</div>
+      <div class="modulo-info">
+        <div class="modulo-nome">${m.nome}</div>
+        <div class="modulo-desc">${m.desc}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label class="toggle-switch">
+          <input type="checkbox" ${m.ativo?'checked':''} onchange="toggleModulo(${i},this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+        ${!['logistica','manutencao','viveiro','agenda'].includes(m.id)?`<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerModulo(${i})">🗑️</button>`:''}
+      </div>
+    </div>`).join('') || '<div class="empty">Nenhum módulo cadastrado.</div>';
+}
+
+function toggleModulo(idx, ativo){
+  modulos[idx].ativo = ativo;
+  salvarModulosLocal();
+  renderModulos();
+  showToast(ativo ? `${modulos[idx].nome} ativado!` : `${modulos[idx].nome} desativado.`);
+}
+
+function salvarModulo(){
+  const nome = document.getElementById('mod-nome').value.trim();
+  const icon = document.getElementById('mod-icon').value.trim() || '📋';
+  const desc = document.getElementById('mod-desc').value.trim();
+  if(!nome) return showToast('Informe o nome do módulo.','err');
+  const id = nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if(modulos.find(m=>m.id===id)) return showToast('Módulo já existe!','err');
+  modulos.push({id, nome, icon, desc, ativo:true});
+  salvarModulosLocal();
+  document.getElementById('form-novo-modulo').style.display='none';
+  document.getElementById('mod-nome').value='';
+  document.getElementById('mod-icon').value='';
+  document.getElementById('mod-desc').value='';
+  renderModulos();
+  showToast('Módulo criado e ativado!');
+  registrarLog('edicao',`Módulo criado: ${nome}`,'🗂️');
+}
+
+function removerModulo(idx){
+  if(!confirm(`Remover o módulo "${modulos[idx].nome}"?`)) return;
+  modulos.splice(idx,1);
+  salvarModulosLocal();
+  renderModulos();
+  showToast('Módulo removido.');
+}
+
+// ===================== ALERTAS =====================
+let configAlertas = {diasParado:30, estoqueBaixo:true, prazoProjeto:3};
+
+function carregarAlertas(){
+  try{
+    const saved = localStorage.getItem('muda_alertas');
+    if(saved) configAlertas = JSON.parse(saved);
+  }catch(e){}
+  document.getElementById('alerta-dias-parado').value = configAlertas.diasParado||30;
+  document.getElementById('alerta-estoque-baixo').checked = configAlertas.estoqueBaixo!==false;
+  document.getElementById('alerta-prazo-proj').value = configAlertas.prazoProjeto||3;
+}
+
+function salvarAlertas(){
+  configAlertas = {
+    diasParado: Number(document.getElementById('alerta-dias-parado').value)||30,
+    estoqueBaixo: document.getElementById('alerta-estoque-baixo').checked,
+    prazoProjeto: Number(document.getElementById('alerta-prazo-proj').value)||3
+  };
+  localStorage.setItem('muda_alertas', JSON.stringify(configAlertas));
+  showToast('Alertas salvos!');
+}
+
+// ===================== UNIDADES =====================
+let unidades = ['un','m²','m','kg','g','L','ml','cx','rolo','saco','pct','hastes','maços','par'];
+
+function carregarUnidades(){
+  try{
+    const saved = localStorage.getItem('muda_unidades');
+    if(saved) unidades = JSON.parse(saved);
+  }catch(e){}
+}
+
+function salvarUnidades(){
+  localStorage.setItem('muda_unidades', JSON.stringify(unidades));
+  atualizarSelectUnidades();
+}
+
+function atualizarSelectUnidades(){
+  const sel = document.getElementById('fi-un');
+  if(sel) sel.innerHTML = unidades.map(u=>`<option>${u}</option>`).join('');
+}
+
+function renderUnidades(){
+  const lista = document.getElementById('lista-unidades');
+  lista.innerHTML = unidades.map((u,i) => `
+    <span class="unidade-item">${u}
+      <button style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:11px;padding:0;margin-left:2px" onclick="removerUnidade(${i})">✕</button>
+    </span>`).join('');
+}
+
+function adicionarUnidade(){
+  const val = document.getElementById('nova-unidade').value.trim();
+  if(!val) return showToast('Digite uma unidade.','err');
+  if(unidades.includes(val)) return showToast('Unidade já existe!','err');
+  unidades.push(val);
+  salvarUnidades();
+  document.getElementById('nova-unidade').value='';
+  renderUnidades();
+  showToast('Unidade adicionada!');
+}
+
+function removerUnidade(idx){
+  unidades.splice(idx,1);
+  salvarUnidades();
+  renderUnidades();
+}
+
+// ===================== APARÊNCIA =====================
+let configAparencia = {empresa:'Muda Paisagismo', slogan:'Sistema ERP · Controle de Estoque', corPrincipal:'#16a34a', corEscura:'#14532d'};
+
+function carregarAparencia(){
+  try{
+    const saved = localStorage.getItem('muda_aparencia');
+    if(saved) configAparencia = JSON.parse(saved);
+  }catch(e){}
+  document.getElementById('ap-empresa').value = configAparencia.empresa||'Muda Paisagismo';
+  document.getElementById('ap-slogan').value = configAparencia.slogan||'Sistema ERP · Controle de Estoque';
+  document.getElementById('ap-cor-principal').value = configAparencia.corPrincipal||'#16a34a';
+  document.getElementById('ap-cor-escura').value = configAparencia.corEscura||'#14532d';
+}
+
+function salvarAparencia(){
+  configAparencia = {
+    empresa: document.getElementById('ap-empresa').value||'Muda Paisagismo',
+    slogan: document.getElementById('ap-slogan').value||'Sistema ERP · Controle de Estoque',
+    corPrincipal: document.getElementById('ap-cor-principal').value,
+    corEscura: document.getElementById('ap-cor-escura').value
+  };
+  localStorage.setItem('muda_aparencia', JSON.stringify(configAparencia));
+  aplicarAparencia();
+  showToast('Aparência salva!');
+}
+
+function aplicarAparencia(){
+  try{
+    const saved = localStorage.getItem('muda_aparencia');
+    if(!saved) return;
+    const ap = JSON.parse(saved);
+    document.documentElement.style.setProperty('--cor-principal', ap.corPrincipal||'#16a34a');
+    document.documentElement.style.setProperty('--cor-escura', ap.corEscura||'#14532d');
+    const sub = document.querySelector('.header-sub');
+    if(sub && ap.slogan) sub.textContent = ap.slogan;
+  }catch(e){}
+}
+// ===================== FIM CONFIG EXTRA =====================
+
 // ===================== FIM CONFIGURAÇÕES =====================
 
 // ===================== FIM FASE 2B =====================
