@@ -176,6 +176,15 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .parado-badge{background:#f3f4f6;color:#6b7280;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
 .parado-badge.critico{background:#fef2f2;color:#dc2626}
 .parado-badge.atencao{background:#fffbeb;color:#d97706}
+/* CONFIGURAÇÕES */
+.config-section{background:#fff;border-radius:12px;padding:20px;border:1px solid #e5e7eb;margin-bottom:14px}
+.config-section-title{font-weight:700;font-size:14px;color:#14532d;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.cat-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;margin-bottom:7px}
+.cat-icon{font-size:20px;min-width:28px;text-align:center}
+.cat-color{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.cat-label{flex:1;font-weight:600;font-size:13px}
+.cat-id{font-size:10px;color:#9ca3af;font-family:monospace}
+
 /* ORDEM DE SERVIÇO */
 .os-header{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;border-radius:12px;padding:16px;margin-bottom:14px}
 .os-title{font-size:18px;font-weight:800}
@@ -509,6 +518,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <button class="tab" onclick="switchTab('projetos',this)">🏗️ Projetos</button>
     <button class="tab" onclick="switchTab('fornecedores',this)">🏭 Fornecedores</button>
     <button class="tab" onclick="switchTab('relatorios',this)">📊 Relatórios</button>
+    <button class="tab" id="tab-config" onclick="switchTab('configuracoes',this)">⚙️ Configurações</button>
   </div>
 </div>
 
@@ -876,6 +886,60 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
   </div>
 </div>
 
+<!-- CONFIGURAÇÕES -->
+<div class="section" id="sec-configuracoes">
+  <div class="config-section">
+    <div class="config-section-title">🏷️ Gerenciar Categorias</div>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">As categorias são usadas no estoque e nos fornecedores. Você pode adicionar, editar ou remover categorias livremente.</p>
+    
+    <div id="form-nova-cat" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:10px" id="form-cat-title">➕ Nova Categoria</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="fg"><label>Nome *</label><input type="text" id="cat-nome" placeholder="Ex: Manutenção"></div>
+        <div class="fg"><label>ID interno *</label><input type="text" id="cat-id" placeholder="Ex: manutencao"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="fg"><label>Ícone (emoji)</label><input type="text" id="cat-icon" placeholder="🔧" maxlength="4"></div>
+        <div class="fg"><label>Prefixo código</label><input type="text" id="cat-prefix" placeholder="MAN" maxlength="3" style="text-transform:uppercase"></div>
+        <div class="fg"><label>Cor</label><input type="color" id="cat-cor" value="#16a34a" style="height:38px;padding:2px"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-green" onclick="salvarCategoria()">Salvar</button>
+        <button class="btn-gray" onclick="cancelarCategoria()">Cancelar</button>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span class="count-lbl" id="cat-count"></span>
+      <button class="btn-green" onclick="abrirFormCategoria()">+ Nova Categoria</button>
+    </div>
+    <div id="lista-categorias"></div>
+  </div>
+
+  <div class="config-section">
+    <div class="config-section-title">📋 Motivos de Movimentação</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div>
+        <div style="font-weight:600;font-size:12px;color:#16a34a;margin-bottom:8px">▲ Motivos de Entrada</div>
+        <div id="lista-motivos-entrada"></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input type="text" id="novo-motivo-entrada" placeholder="Novo motivo..." style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px">
+          <button class="btn-green" style="font-size:12px;padding:7px 12px" onclick="adicionarMotivo('entrada')">+</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-weight:600;font-size:12px;color:#dc2626;margin-bottom:8px">▼ Motivos de Saída</div>
+        <div id="lista-motivos-saida"></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input type="text" id="novo-motivo-saida" placeholder="Novo motivo..." style="flex:1;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px">
+          <button class="btn-green" style="font-size:12px;padding:7px 12px" onclick="adicionarMotivo('saida')">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 </div>
 </div>
 
@@ -890,7 +954,7 @@ const NIVEIS={
   operacional:{label:'Operacional',cls:'np-operacional',editar:true,deletar:false,cadastrar:false,qr:false},
   visualizador:{label:'Visualizador',cls:'np-visualizador',editar:false,deletar:false,cadastrar:false,qr:false}
 };
-const CATS={
+let CATS={
   plantas_naturais:{label:'Plantas Naturais',icon:'🌿',prefix:'PAN',cor:'#16a34a'},
   plantas_preservadas:{label:'Plantas Preservadas',icon:'🍂',prefix:'PAP',cor:'#ca8a04'},
   plantas_artificiais:{label:'Plantas Artificiais',icon:'🎋',prefix:'PAA',cor:'#0891b2'},
@@ -898,8 +962,7 @@ const CATS={
   estrutura:{label:'Materiais de Estrutura',icon:'🔩',prefix:'EST',cor:'#b45309'},
   ferramentas:{label:'Ferramentas e Equip.',icon:'🛠️',prefix:'FER',cor:'#475569'}
 };
-const ME=['Compra/Reposição','Devolução','Transferência','Inventário inicial','Outro'];
-const MS=['Projeto de cliente','Manutenção','Descarte','Transferência','Outro'];
+// Motivos dinâmicos - carregados via carregarCategorias()
 let produtos=[],historico=[],projetos=[],fornecedores=[],notificacoes=[];
 let editItemId=null,editFornId=null,editProjId=null,editUsuId=null;
 let movItemModal=null,movTipoModal='entrada',movItemTab=null,movTipoTab='entrada';
@@ -930,6 +993,7 @@ function fazerLogin(){
   if(perfil.foto)document.getElementById('header-avatar').innerHTML=`<img src="${perfil.foto}">`;
   aplicarPermissoes();
   carregarLog();
+  carregarCategorias();
   registrarLog('login', `Login realizado`, '🔐');
   carregarDados();
   const params=new URLSearchParams(window.location.search);
@@ -949,6 +1013,7 @@ function aplicarPermissoes(){
   const nv=NIVEIS[usuarioAtual.nivel];
   ['btn-novo-item','btn-novo-proj','btn-novo-forn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=nv.cadastrar?'':'none';});
   if(usuarioAtual.nivel==='visualizador')document.getElementById('tab-mov').style.display='none';
+  if(usuarioAtual.nivel!=='admin')document.getElementById('tab-config').style.display='none';
   if(nv.qr)document.getElementById('dash-qr').style.display='block';
 }
 function pode(a){return usuarioAtual&&NIVEIS[usuarioAtual.nivel][a];}
@@ -966,6 +1031,7 @@ function switchTab(tab,el){
   if(tab==='projetos')renderProjetos();
   if(tab==='fornecedores')renderFornecedores();
   if(tab==='relatorios')initRelatorios();
+  if(tab==='configuracoes')initConfiguracoes();
   document.querySelectorAll('.col-menu').forEach(m=>m.classList.remove('open'));
   document.getElementById('notif-panel').classList.remove('open');
 }
@@ -1101,7 +1167,7 @@ function abrirItemPorQR(cod){const p=produtos.find((x,i)=>getCodigo(x)===cod);if
 function filtrarItens(){const q=document.getElementById('mov-search').value.toLowerCase();const dd=document.getElementById('mov-drop');if(!q){dd.classList.remove('open');return;}const res=produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);dd.innerHTML=res.length?res.map(p=>`<div class="idd-opt" onclick="selecionarItemMov('${p.id}')"><div>${p.nome}</div><div style="display:flex;gap:6px;margin-top:1px"><span style="font-size:10px;color:#16a34a;font-weight:700">${getCodigo(p)}</span>${p.sku?`<span style="font-size:10px;color:#7c3aed">SKU:${p.sku}</span>`:''}<span style="font-size:10px;color:#6b7280">Saldo: ${p.quantidade} ${p.unidade}</span></div></div>`).join(''):'<div class="idd-opt" style="color:#9ca3af">Nenhum item encontrado</div>';dd.classList.add('open');}
 function selecionarItemMov(id){movItemTab=id;const p=produtos.find(x=>x.id==id);if(!p)return;document.getElementById('mov-search').value=p.nome;document.getElementById('mov-drop').classList.remove('open');const sc=document.getElementById('mov-selected');sc.style.display='block';document.getElementById('isc-nome').textContent=p.nome;const low=p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo);document.getElementById('isc-info').innerHTML=`<span style="color:${low?'#dc2626':'#16a34a'};font-weight:700">${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}</span><span style="color:#6b7280">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}</span><span class="ic-code">${getCodigo(p)}</span>${p.localizacao?`<span style="color:#7c3aed;font-size:10px">📍 ${p.localizacao}</span>`:''}`;}
 function fecharDrop(){document.getElementById('mov-drop').classList.remove('open');}
-function setMovTipo(t){movTipoTab=t;document.getElementById('mov-tab-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mov-tab-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mov-motivo2');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?ME:MS).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
+function setMovTipo(t){movTipoTab=t;document.getElementById('mov-tab-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mov-tab-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mov-motivo2');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?motivosEntrada:motivosSaida).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
 function popularMovSels(){setMovTipo('entrada');['mov-proj2','mm-projeto'].forEach(id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Sem projeto</option>';projetos.filter(p=>p.status==='ativo').forEach(p=>s.innerHTML+=`<option value="${p.nome}">${p.nome}</option>`);});}
 async function salvarMovTab(){
   if(!movItemTab)return showToast('Selecione um item.','err');
@@ -1112,7 +1178,7 @@ async function salvarMovTab(){
   try{const nova=movTipoTab==='entrada'?Number(p.quantidade)+qty:Number(p.quantidade)-qty;await api({action:'addMovimentacao',itemId:movItemTab,itemNome:p.nome,tipo:movTipoTab,quantidade:qty,motivo:document.getElementById('mov-motivo2').value,responsavel:resp,projeto:document.getElementById('mov-proj2').value||'—',obs:document.getElementById('mov-obs2').value});await api({action:'editProduto',id:movItemTab,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',foto:p.foto||''});showToast(movTipoTab==='entrada'?'Entrada registrada!':'Saída registrada!');registrarLog('movimentacao',`${movTipoTab==='entrada'?'Entrada':'Saída'}: ${p.nome} (${movTipoTab==='entrada'?'+':'-'}${qty} ${p.unidade})`,movTipoTab==='entrada'?'📥':'📤');adicionarNotif(`${movTipoTab==='entrada'?'Entrada':'Saída'}: ${p.nome} (${movTipoTab==='entrada'?'+':'-'}${qty} ${p.unidade})`,'info',movTipoTab==='entrada'?'📥':'📤');document.getElementById('mov-search').value='';document.getElementById('mov-selected').style.display='none';document.getElementById('mov-qty2').value='';document.getElementById('mov-resp2').value='';document.getElementById('mov-obs2').value='';movItemTab=null;await carregarDados();}catch(e){showToast('Erro.','err');}
 }
 function abrirMovRapida(id,tipo){if(!pode('editar'))return showToast('Sem permissão.','err');movItemModal=id;const p=produtos.find(x=>x.id==id);document.getElementById('mm-title').textContent=tipo==='entrada'?'▲ Registrar Entrada':'▼ Registrar Saída';document.getElementById('mm-sub').textContent=p?`${p.nome} — saldo: ${p.quantidade} ${p.unidade}`:'';['mm-qty','mm-resp','mm-obs'].forEach(i=>document.getElementById(i).value='');setTipo(tipo);popularMovSels();document.getElementById('modal-mov').classList.add('open');}
-function setTipo(t){movTipoModal=t;document.getElementById('mm-btn-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mm-btn-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mm-motivo');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?ME:MS).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
+function setTipo(t){movTipoModal=t;document.getElementById('mm-btn-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mm-btn-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mm-motivo');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?motivosEntrada:motivosSaida).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
 async function confirmarMovModal(){const qty=Number(document.getElementById('mm-qty').value);const resp=document.getElementById('mm-resp').value.trim();if(!qty||qty<=0)return showToast('Quantidade inválida.','err');if(!resp)return showToast('Informe o responsável.','err');const p=produtos.find(x=>x.id==movItemModal);if(!p)return;if(movTipoModal==='saida'&&Number(p.quantidade)-qty<0)return showToast('Estoque insuficiente!','err');try{const nova=movTipoModal==='entrada'?Number(p.quantidade)+qty:Number(p.quantidade)-qty;await api({action:'addMovimentacao',itemId:movItemModal,itemNome:p.nome,tipo:movTipoModal,quantidade:qty,motivo:document.getElementById('mm-motivo').value,responsavel:resp,projeto:document.getElementById('mm-projeto').value||'—',obs:document.getElementById('mm-obs').value});await api({action:'editProduto',id:movItemModal,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',foto:p.foto||''});showToast(movTipoModal==='entrada'?'Entrada registrada!':'Saída registrada!');fecharModal('modal-mov');await carregarDados();}catch(e){showToast('Erro.','err');}}
 function renderMovHistResumo(){const el=document.getElementById('mov-hist');el.innerHTML=historico.length?historico.slice(0,5).map(h=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px"><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span><span style="flex:1">${h.itemNome}</span><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span></div>`).join(''):'<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';}
 function renderMovBaixo(){const el=document.getElementById('mov-baixo');const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));el.innerHTML=baixo.length?baixo.slice(0,4).map(p=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #fee2e2;font-size:12px"><span>${p.nome}</span><span style="font-weight:700;color:#dc2626">${p.quantidade} ${p.unidade}</span></div>`).join(''):'<div style="color:#16a34a;font-size:13px">✅ Todos em conformidade!</div>';}
@@ -1630,6 +1696,177 @@ function imprimirOS(){
   win.document.close();
 }
 // ===================== FIM OS =====================
+
+
+// ===================== CONFIGURAÇÕES =====================
+let editCatId = null;
+let motivosEntrada = ['Compra/Reposição','Devolução','Transferência','Inventário inicial','Outro'];
+let motivosSaida = ['Projeto de cliente','Manutenção','Descarte','Transferência','Outro'];
+
+function initConfiguracoes(){
+  carregarCategorias();
+  renderCategorias();
+  renderMotivos();
+}
+
+function carregarCategorias(){
+  try{
+    const saved = localStorage.getItem('muda_cats');
+    if(saved){
+      const cats = JSON.parse(saved);
+      CATS = {};
+      cats.forEach(c => { CATS[c.id] = {label:c.label, icon:c.icon, prefix:c.prefix, cor:c.cor}; });
+    }
+    const me = localStorage.getItem('muda_motivos_entrada');
+    const ms = localStorage.getItem('muda_motivos_saida');
+    if(me) motivosEntrada = JSON.parse(me);
+    if(ms) motivosSaida = JSON.parse(ms);
+  }catch(e){}
+}
+
+function salvarCatsLocal(){
+  const arr = Object.entries(CATS).map(([id,c]) => ({id, label:c.label, icon:c.icon, prefix:c.prefix, cor:c.cor}));
+  localStorage.setItem('muda_cats', JSON.stringify(arr));
+  // Sync para API
+  try{ api({action:'saveCategorias', dados:JSON.stringify(arr)}); }catch(e){}
+}
+
+function renderCategorias(){
+  const lista = document.getElementById('lista-categorias');
+  const count = document.getElementById('cat-count');
+  const cats = Object.entries(CATS);
+  count.textContent = cats.length + ' categorias cadastradas';
+  
+  lista.innerHTML = cats.map(([id,c]) => `
+    <div class="cat-item">
+      <div class="cat-icon">${c.icon}</div>
+      <div class="cat-color" style="background:${c.cor}"></div>
+      <div style="flex:1">
+        <div class="cat-label">${c.label}</div>
+        <div class="cat-id">ID: ${id} · Prefix: ${c.prefix}</div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn-blue" onclick="editarCategoria('${id}')">✏️</button>
+        <button class="btn-red" onclick="removerCategoria('${id}')">🗑️</button>
+      </div>
+    </div>`).join('') || '<div class="empty">Nenhuma categoria cadastrada.</div>';
+  
+  // Update all category selects throughout the app
+  atualizarSelectsCategorias();
+}
+
+function atualizarSelectsCategorias(){
+  const opts = `<option value="">Todas categorias</option>` + 
+    Object.entries(CATS).map(([id,c]) => `<option value="${id}">${c.icon} ${c.label}</option>`).join('');
+  
+  const optsSemTodas = Object.entries(CATS).map(([id,c]) => `<option value="${id}">${c.icon} ${c.label}</option>`).join('');
+
+  // Update all selects
+  ['est-cat','rep-cat','forn-cf','rv-cat','ra-cat'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = opts;
+  });
+  ['fi-cat','mf-cat'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = optsSemTodas;
+  });
+}
+
+function abrirFormCategoria(id){
+  editCatId = id || null;
+  const c = id ? CATS[id] : null;
+  document.getElementById('form-cat-title').textContent = c ? '✏️ Editar Categoria' : '➕ Nova Categoria';
+  document.getElementById('cat-nome').value = c?.label || '';
+  document.getElementById('cat-id').value = id || '';
+  document.getElementById('cat-id').readOnly = !!id;
+  document.getElementById('cat-icon').value = c?.icon || '📦';
+  document.getElementById('cat-prefix').value = c?.prefix || '';
+  document.getElementById('cat-cor').value = c?.cor || '#16a34a';
+  document.getElementById('form-nova-cat').style.display = 'block';
+  document.getElementById('cat-nome').focus();
+}
+
+function cancelarCategoria(){
+  editCatId = null;
+  document.getElementById('form-nova-cat').style.display = 'none';
+}
+
+function salvarCategoria(){
+  const nome = document.getElementById('cat-nome').value.trim();
+  let id = document.getElementById('cat-id').value.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const icon = document.getElementById('cat-icon').value.trim() || '📦';
+  const prefix = document.getElementById('cat-prefix').value.trim().toUpperCase() || id.substring(0,3).toUpperCase();
+  const cor = document.getElementById('cat-cor').value;
+
+  if(!nome || !id) return showToast('Preencha nome e ID.','err');
+  if(!editCatId && CATS[id]) return showToast('Esse ID já existe!','err');
+
+  CATS[id] = {label:nome, icon, prefix, cor};
+  salvarCatsLocal();
+  cancelarCategoria();
+  renderCategorias();
+  showToast(editCatId ? 'Categoria atualizada!' : 'Categoria criada!');
+  registrarLog('edicao', `Categoria ${editCatId?'editada':'criada'}: ${nome}`, '🏷️');
+}
+
+function editarCategoria(id){
+  abrirFormCategoria(id);
+}
+
+function removerCategoria(id){
+  if(!confirm(`Remover a categoria "${CATS[id]?.label}"? Itens com essa categoria não serão afetados.`)) return;
+  delete CATS[id];
+  salvarCatsLocal();
+  renderCategorias();
+  showToast('Categoria removida.');
+}
+
+function renderMotivos(){
+  const listE = document.getElementById('lista-motivos-entrada');
+  const listS = document.getElementById('lista-motivos-saida');
+  
+  listE.innerHTML = motivosEntrada.map((m,i) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px">
+      <span style="flex:1;font-size:12px">${m}</span>
+      <button class="btn-red" style="padding:2px 6px;font-size:11px" onclick="removerMotivo('entrada',${i})">✕</button>
+    </div>`).join('');
+  
+  listS.innerHTML = motivosSaida.map((m,i) => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px">
+      <span style="flex:1;font-size:12px">${m}</span>
+      <button class="btn-red" style="padding:2px 6px;font-size:11px" onclick="removerMotivo('saida',${i})">✕</button>
+    </div>`).join('');
+}
+
+function adicionarMotivo(tipo){
+  const input = document.getElementById(`novo-motivo-${tipo}`);
+  const val = input.value.trim();
+  if(!val) return showToast('Digite um motivo.','err');
+  if(tipo === 'entrada'){
+    if(motivosEntrada.includes(val)) return showToast('Motivo já existe.','err');
+    motivosEntrada.push(val);
+    localStorage.setItem('muda_motivos_entrada', JSON.stringify(motivosEntrada));
+  } else {
+    if(motivosSaida.includes(val)) return showToast('Motivo já existe.','err');
+    motivosSaida.push(val);
+    localStorage.setItem('muda_motivos_saida', JSON.stringify(motivosSaida));
+  }
+  input.value = '';
+  renderMotivos();
+  showToast('Motivo adicionado!');
+}
+
+function removerMotivo(tipo, idx){
+  if(tipo === 'entrada'){
+    motivosEntrada.splice(idx, 1);
+    localStorage.setItem('muda_motivos_entrada', JSON.stringify(motivosEntrada));
+  } else {
+    motivosSaida.splice(idx, 1);
+    localStorage.setItem('muda_motivos_saida', JSON.stringify(motivosSaida));
+  }
+  renderMotivos();
+}
+// ===================== FIM CONFIGURAÇÕES =====================
 
 // ===================== FIM FASE 2B =====================
 
