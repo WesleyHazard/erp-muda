@@ -2826,4 +2826,19 @@ function cancelarAddMaterial(){
   document.getElementById('mat-est-search') && (document.getElementById('mat-est-search').value = '');
   document.getElementById('mat-qty-est') && (document.getElementById('mat-qty-est').value = '');
   document.getElementById('mat-obs-est') && (document.getElementById('mat-obs-est').value = '');
-  document.getElementById('mat-est-selected') && (document.getElementById('mat-est-selected').style.display
+  document.getElementById('mat-est-selected') && (document.getElementById('mat-est-selected').style.display = 'none');
+  matEstSelecionado = null;
+}
+
+function abrirAddMaterial(){
+  document.getElementById('add-material-form').style.display = 'block';
+  setMatTab('estoque');
+  document.getElementById('mat-est-search').focus();
+}
+// ===================== FIM MATERIAL ESTOQUE =====================
+
+// ===================== FIM FASE 2B =====================
+
+</script>
+</body>
+</html>
