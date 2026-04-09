@@ -1617,7 +1617,7 @@ function renderProjetos(){
     const pct=mats.length?Math.round(sepCount/mats.length*100):0;
     const entrega=p.dataEntrega?new Date(p.dataEntrega+'T00:00:00'):null;
     const vencendo=entrega&&entrega<hoje&&p.status!=='concluido';
-    return `<div class="proj-card-new ${p.status||'ativo'}" onclick="abrirDetalhesProjeto('${p.id}')" style="cursor:pointer">
+    return `<div class="proj-card-new ${p.status||'ativo'}" onclick="abrirDetalhesProjeto(this)" data-proj-id="${p.id}" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
         <div style="flex:1">
           <div style="font-weight:700;font-size:15px">${p.nome}</div>
@@ -1655,12 +1655,38 @@ function abrirModalProj(id){
   document.getElementById('mp-nome').value=p?.nome||'';
   document.getElementById('mp-cliente').value=p?.cliente||'';
   document.getElementById('mp-resp').value=p?.responsavel||'';
-  document.getElementById('mp-inicio').value=p?.dataInicio||'';
-  document.getElementById('mp-entrega').value=p?.dataEntrega||'';
+  // Convert date to ISO format for input type="date"
+  document.getElementById('mp-inicio').value=toISODate(p?.dataInicio||'');
+  document.getElementById('mp-entrega').value=toISODate(p?.dataEntrega||'');
   document.getElementById('mp-sep').value=p?.responsavelSep||'';
   document.getElementById('mp-status').value=p?.status||'ativo';
   document.getElementById('mp-obs').value=p?.obs||'';
   document.getElementById('modal-proj').classList.add('open');
+}
+
+// Convert any date format to ISO yyyy-mm-dd for input[type=date]
+function toISODate(d){
+  if(!d) return '';
+  try{
+    const s = String(d).trim();
+    if(!s) return '';
+    // Already ISO format yyyy-mm-dd
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+    // BR format dd/mm/yyyy
+    if(/^\d{2}\/\d{2}\/\d{4}/.test(s)){
+      const [day,m,y] = s.substring(0,10).split('/');
+      return `${y}-${m}-${day}`;
+    }
+    // Try parsing as date
+    const dt = new Date(s);
+    if(!isNaN(dt.getTime())){
+      const y=dt.getFullYear();
+      const m=String(dt.getMonth()+1).padStart(2,'0');
+      const day=String(dt.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    }
+    return '';
+  }catch(e){return '';}
 }
 async function salvarProjeto(){
   const nome=document.getElementById('mp-nome').value.trim();
@@ -1986,7 +2012,7 @@ let osProjetoId = null;
 
 function abrirOS(id){
   osProjetoId = id;
-  const p = projetos.find(x => x.id === id);
+  const p = projetos.find(x => String(x.id) === String(id));
   if(!p) return;
   
   document.getElementById('mos-title').textContent = '📋 OS — ' + p.nome;
@@ -2077,11 +2103,10 @@ function renderMateriais(p){
 }
 
 function setMatStatus(projId, idx, status){
-  const p = projetos.find(x => x.id === projId);
+  const p = projetos.find(x => String(x.id) === String(projId));
   if(!p || !p.materiais) return;
   p.materiais[idx].status = p.materiais[idx].status === status ? 'pendente' : status;
-  // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
+  syncProjetoSheets(p);
   renderMateriais(p);
   renderProjetos();
 }
@@ -2116,30 +2141,22 @@ function abrirAddMaterial(){
   document.getElementById('mat-nome').focus();
 }
 
-function cancelarAddMaterial(){
-  document.getElementById('add-material-form').style.display = 'none';
-  document.getElementById('mat-nome').value = '';
-  document.getElementById('mat-qty').value = '';
-  document.getElementById('mat-obs').value = '';
-  document.getElementById('mat-un').value = 'un';
-}
+// cancelarAddMaterial replaced below
 
 function salvarMaterial(){
   const nome = document.getElementById('mat-nome').value.trim();
   const qty = document.getElementById('mat-qty').value;
   if(!nome || !qty) return showToast('Preencha o material e a quantidade.','err');
-  const p = projetos.find(x => x.id === osProjetoId);
+  const p = projetos.find(x => String(x.id) === String(osProjetoId));
   if(!p) return;
   if(!p.materiais) p.materiais = [];
   p.materiais.push({
-    nome,
-    qty: Number(qty),
+    nome, qty: Number(qty),
     unidade: document.getElementById('mat-un').value,
     obs: document.getElementById('mat-obs').value,
     status: 'pendente'
   });
-  // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
+  syncProjetoSheets(p);
   cancelarAddMaterial();
   renderMateriais(p);
   renderProjetos();
@@ -2659,8 +2676,9 @@ function aplicarAparencia(){
 
 
 // ===================== PROJETO DETALHES =====================
-function abrirDetalhesProjeto(id){
-  const p = projetos.find(x => x.id === id);
+function abrirDetalhesProjeto(elOrId){
+  const id = typeof elOrId === 'string' ? elOrId : elOrId.dataset?.projId || elOrId;
+  const p = projetos.find(x => String(x.id) === String(id));
   if(!p) return;
   const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};
   const mats = p.materiais || [];
