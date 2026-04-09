@@ -176,6 +176,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .parado-badge{background:#f3f4f6;color:#6b7280;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
 .parado-badge.critico{background:#fef2f2;color:#dc2626}
 .parado-badge.atencao{background:#fffbeb;color:#d97706}
+/* MANUTENÇÃO */
+.man-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .2s}
+.man-card:hover{box-shadow:0 2px 8px #16a34a22}
+.man-status{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+.ms-funcionando{background:#f0fdf4;color:#16a34a}
+.ms-manutencao{background:#eff6ff;color:#2563eb}
+.ms-aguardando{background:#fffbeb;color:#d97706}
+.ms-quebrado{background:#fef2f2;color:#dc2626}
+.man-tipo-icon{font-size:22px;min-width:32px;text-align:center}
+
 /* MÓDULOS */
 .modulo-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
 .modulo-card.ativo{border-color:#16a34a;background:#f0fdf4}
@@ -494,6 +504,64 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <div class="proj-prog-bar"><div class="proj-prog-fill" id="mos-prog-fill" style="width:0%"></div></div>
   </div>
   <div id="lista-materiais"></div>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-forn-det">
+<div class="modal" style="max-width:600px">
+  <div class="modal-header">
+    <div class="modal-title" id="mfd-title">🏭 Fornecedor</div>
+    <button class="modal-close" onclick="fecharModal('modal-forn-det')">×</button>
+  </div>
+  <div id="mfd-content" style="margin-top:12px"></div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn-blue" id="mfd-edit-btn" onclick="">✏️ Editar</button>
+    <button class="btn-gray" onclick="fecharModal('modal-forn-det')">Fechar</button>
+  </div>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-manutencao">
+<div class="modal" style="max-width:560px">
+  <div class="modal-header">
+    <div class="modal-title" id="mman-title">🔧 Registro de Manutenção</div>
+    <button class="modal-close" onclick="fecharModal('modal-manutencao')">×</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+    <div class="fg"><label>Equipamento/Ferramenta *</label><input type="text" id="mman-equip" placeholder="Ex: Motosserra, Compressor..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>Tipo</label>
+        <select id="mman-tipo">
+          <option value="equipamento">🔌 Equipamento</option>
+          <option value="ferramenta">🔧 Ferramenta</option>
+          <option value="veiculo">🚗 Veículo</option>
+          <option value="estrutura">🏗️ Estrutura</option>
+          <option value="outro">📦 Outro</option>
+        </select>
+      </div>
+      <div class="fg"><label>Status</label>
+        <select id="mman-status">
+          <option value="funcionando">✅ Funcionando</option>
+          <option value="manutencao">🔧 Em Manutenção</option>
+          <option value="aguardando">⏳ Aguardando Peça</option>
+          <option value="quebrado">❌ Quebrado</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>📅 Última Manutenção</label><input type="date" id="mman-ultima"></div>
+      <div class="fg"><label>📅 Próxima Prevista</label><input type="date" id="mman-proxima"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>👤 Responsável</label><input type="text" id="mman-resp" placeholder="Quem fez/fará"></div>
+      <div class="fg"><label>💰 Custo (R$)</label><input type="number" id="mman-custo" placeholder="0,00"></div>
+    </div>
+    <div class="fg"><label>📝 Observações</label><input type="text" id="mman-obs" placeholder="Detalhes sobre a manutenção..."></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-confirmar" onclick="salvarManutencao()">Salvar</button>
+      <button class="btn-gray" onclick="fecharModal('modal-manutencao')">Cancelar</button>
+    </div>
+  </div>
 </div>
 </div>
 <!-- SISTEMA -->
@@ -1105,6 +1173,7 @@ async function fazerLogin(){
   carregarCategorias();
   carregarModulos();
   carregarUnidades();
+  carregarManutencoes();
   aplicarAparencia();
   registrarLog('login', `Login realizado`, '🔐');
   carregarDados();
@@ -1157,27 +1226,196 @@ document.addEventListener('click',e=>{
   if(!e.target.closest('.notif-wrap'))document.getElementById('notif-panel').classList.remove('open');
 });
 function toggleNotif(){document.getElementById('notif-panel').classList.toggle('open');}
-function adicionarNotif(msg,tipo='info',icon='📦'){
-  notificacoes.unshift({msg,tipo,icon,time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
-  if(notificacoes.length>20)notificacoes=notificacoes.slice(0,20);renderNotifs();
+function limparNotifs(){notificacoes=[];renderNotifs();}
+
+// ===================== FORNECEDOR DETALHES =====================
+function mostrarDetalhesFornModal(f, itensForn){
+  const cat = CATS[f.categoria];
+  document.getElementById('mfd-title').textContent = '🏭 ' + f.nome;
+  document.getElementById('mfd-edit-btn').onclick = () => { fecharModal('modal-forn-det'); abrirModalForn(f.id); };
+  
+  document.getElementById('mfd-content').innerHTML = `
+    <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px">
+        ${f.tel?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">TELEFONE</div><div>📞 ${f.tel}</div></div>`:''}
+        ${f.email?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">E-MAIL</div><div>✉️ ${f.email}</div></div>`:''}
+        ${cat?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">CATEGORIA</div><div>${cat.icon} ${cat.label}</div></div>`:''}
+      </div>
+      ${f.obs?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #bbf7d0;font-size:12px;color:#6b7280">📝 ${f.obs}</div>`:''}
+    </div>
+    <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Itens cadastrados (${itensForn.length})</div>
+    ${itensForn.length ? itensForn.map(p=>`
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
+        <span>${CATS[p.categoria]?.icon||''} ${p.nome}</span>
+        <span style="font-weight:700;color:#16a34a">${p.quantidade} ${p.unidade}</span>
+      </div>`).join('') : '<div style="color:#9ca3af;font-size:12px;padding:8px 0">Nenhum item cadastrado para este fornecedor.</div>'}`;
+  
+  document.getElementById('modal-forn-det').classList.add('open');
 }
+
+// ===================== MÓDULO MANUTENÇÃO =====================
+let manutencoes = [];
+let editManId = null;
+
+function carregarManutencoes(){
+  try{ manutencoes = JSON.parse(localStorage.getItem('muda_manutencoes') || '[]'); }catch(e){ manutencoes = []; }
+}
+
+function salvarManutencoes(){
+  localStorage.setItem('muda_manutencoes', JSON.stringify(manutencoes));
+  // Sync to sheets
+  try{ api({action:'syncManutencoes', dados: JSON.stringify(manutencoes)}); }catch(e){}
+}
+
+function renderModuloManutencao(){
+  carregarManutencoes();
+  const statusLabel = {funcionando:'✅ Funcionando', manutencao:'🔧 Em Manutenção', aguardando:'⏳ Aguardando Peça', quebrado:'❌ Quebrado'};
+  const statusCls = {funcionando:'ms-funcionando', manutencao:'ms-manutencao', aguardando:'ms-aguardando', quebrado:'ms-quebrado'};
+  const tipoIcon = {equipamento:'🔌', ferramenta:'🔧', veiculo:'🚗', estrutura:'🏗️', outro:'📦'};
+  
+  const totalFuncionando = manutencoes.filter(m=>m.status==='funcionando').length;
+  const totalProblema = manutencoes.filter(m=>m.status!=='funcionando').length;
+  
+  return `<div>
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">${manutencoes.length}</div><div class="stat-sub">equipamentos</div></div></div>
+      <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Funcionando</div><div class="stat-value" style="color:#16a34a">${totalFuncionando}</div></div></div>
+      <div class="stat-card" style="border-left-color:#dc2626"><div class="stat-icon">⚠️</div><div><div class="stat-label">Com Problema</div><div class="stat-value" style="color:#dc2626">${totalProblema}</div></div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-weight:700;font-size:14px;color:#14532d">🔧 Equipamentos e Ferramentas</div>
+      <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>
+    </div>
+    ${manutencoes.length ? manutencoes.map((m,i)=>{
+      const hoje = new Date();
+      const proxima = m.proxima ? new Date(m.proxima+'T00:00:00') : null;
+      const vencida = proxima && proxima < hoje && m.status === 'funcionando';
+      return `<div class="man-card" onclick="abrirModalManutencao(${i})">
+        <div class="man-tipo-icon">${tipoIcon[m.tipo]||'📦'}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">${m.equipamento}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">
+            ${m.responsavel?`<span>👤 ${m.responsavel}</span>`:''}
+            ${m.ultima?`<span>📅 Última: ${new Date(m.ultima+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}
+            ${m.proxima?`<span style="color:${vencida?'#dc2626':'#6b7280'}">⏭️ Próxima: ${new Date(m.proxima+'T00:00:00').toLocaleDateString('pt-BR')}${vencida?' ⚠️':''}</span>`:''}
+            ${m.custo?`<span>💰 R$ ${Number(m.custo).toFixed(2)}</span>`:''}
+          </div>
+          ${m.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">📝 ${m.obs}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <span class="man-status ${statusCls[m.status]||''}">${statusLabel[m.status]||m.status}</span>
+          ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();removerManutencao(${i})">🗑️</button>`:''}
+        </div>
+      </div>`;
+    }).join('') : '<div class="empty">Nenhum equipamento cadastrado. Clique em "+ Novo Registro".</div>'}
+  </div>`;
+}
+
+function abrirModalManutencao(idx){
+  editManId = idx !== undefined ? idx : null;
+  const m = idx !== undefined ? manutencoes[idx] : null;
+  document.getElementById('mman-title').textContent = m ? '✏️ Editar Manutenção' : '🔧 Novo Registro';
+  document.getElementById('mman-equip').value = m?.equipamento || '';
+  document.getElementById('mman-tipo').value = m?.tipo || 'equipamento';
+  document.getElementById('mman-status').value = m?.status || 'funcionando';
+  document.getElementById('mman-ultima').value = m?.ultima || '';
+  document.getElementById('mman-proxima').value = m?.proxima || '';
+  document.getElementById('mman-resp').value = m?.responsavel || '';
+  document.getElementById('mman-custo').value = m?.custo || '';
+  document.getElementById('mman-obs').value = m?.obs || '';
+  document.getElementById('modal-manutencao').classList.add('open');
+}
+
+function salvarManutencao(){
+  const equip = document.getElementById('mman-equip').value.trim();
+  if(!equip) return showToast('Informe o equipamento.','err');
+  const m = {
+    equipamento: equip,
+    tipo: document.getElementById('mman-tipo').value,
+    status: document.getElementById('mman-status').value,
+    ultima: document.getElementById('mman-ultima').value,
+    proxima: document.getElementById('mman-proxima').value,
+    responsavel: document.getElementById('mman-resp').value,
+    custo: document.getElementById('mman-custo').value,
+    obs: document.getElementById('mman-obs').value,
+    atualizadoEm: new Date().toLocaleDateString('pt-BR')
+  };
+  if(editManId !== null){ manutencoes[editManId] = m; }
+  else { manutencoes.push(m); }
+  salvarManutencoes();
+  fecharModal('modal-manutencao');
+  // Re-render module
+  atualizarTabsModulos();
+  showToast(editManId !== null ? 'Registro atualizado!' : 'Registro salvo!');
+  registrarLog('edicao', `Manutenção ${editManId!==null?'atualizada':'registrada'}: ${equip}`, '🔧');
+}
+
+function removerManutencao(idx){
+  if(!confirm('Remover este registro?')) return;
+  manutencoes.splice(idx, 1);
+  salvarManutencoes();
+  atualizarTabsModulos();
+  showToast('Registro removido.');
+}
+
+// ===================== NOTIFICAÇÕES CLICÁVEIS =====================
+function gerarNotificacoes(){
+  notificacoes=[];
+  const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));
+  if(baixo.length>0){
+    adicionarNotif(`${baixo.length} item(ns) com estoque baixo`,'urgente','🚨','reposicao');
+    baixo.slice(0,3).forEach(p=>adicionarNotif(`${p.nome}: ${p.quantidade} ${p.unidade}`,'urgente','⚠️','reposicao'));
+  }
+  const parados=getItensParados();
+  if(parados.length>0) adicionarNotif(`${parados.length} item(ns) parados há +30 dias`,'atencao','😴','relatorios');
+  const projAtivos=projetos.filter(p=>p.status==='ativo');
+  if(projAtivos.length>0) adicionarNotif(`${projAtivos.length} projeto(s) em andamento`,'info','🏗️','projetos');
+  // Check manutencao alerts
+  const hoje = new Date();
+  const manVencidas = manutencoes.filter(m=>{
+    if(!m.proxima) return false;
+    const d = new Date(m.proxima+'T00:00:00');
+    return d < hoje && m.status === 'funcionando';
+  });
+  if(manVencidas.length > 0) adicionarNotif(`${manVencidas.length} manutenção(ões) vencida(s)`,'urgente','🔧','manutencao');
+}
+
+function adicionarNotif(msg, tipo='info', icon='📦', aba=null){
+  notificacoes.unshift({msg, tipo, icon, aba, time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})});
+  if(notificacoes.length>20) notificacoes=notificacoes.slice(0,20);
+  renderNotifs();
+}
+
 function renderNotifs(){
   const badge=document.getElementById('notif-badge');
   const lista=document.getElementById('notif-lista');
   if(notificacoes.length>0){badge.style.display='flex';badge.textContent=notificacoes.length>9?'9+':notificacoes.length;}
   else{badge.style.display='none';}
-  lista.innerHTML=notificacoes.length?notificacoes.map(n=>`<div class="notif-item notif-${n.tipo}"><div class="notif-icon">${n.icon}</div><div class="notif-body"><div class="notif-msg">${n.msg}</div><div class="notif-time">${n.time}</div></div></div>`).join(''):'<div class="notif-empty">Nenhuma notificação</div>';
+  lista.innerHTML=notificacoes.length?notificacoes.map(n=>`
+    <div class="notif-item notif-${n.tipo}" ${n.aba?`onclick="navegarNotif('${n.aba}')" style="cursor:pointer"`:''}> 
+      <div class="notif-icon">${n.icon}</div>
+      <div class="notif-body">
+        <div class="notif-msg">${n.msg}</div>
+        <div class="notif-time">${n.time}${n.aba?' · Clique para ver':''}</div>
+      </div>
+    </div>`).join(''):'<div class="notif-empty">Nenhuma notificação</div>';
 }
-function limparNotifs(){notificacoes=[];renderNotifs();}
-function gerarNotificacoes(){
-  notificacoes=[];
-  const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));
-  if(baixo.length>0){adicionarNotif(`${baixo.length} item(ns) com estoque baixo`,'urgente','🚨');baixo.slice(0,3).forEach(p=>adicionarNotif(`${p.nome}: ${p.quantidade} ${p.unidade}`,'urgente','⚠️'));}
-  const parados=getItensParados();
-  if(parados.length>0)adicionarNotif(`${parados.length} item(ns) parados há +30 dias`,'atencao','😴');
-  const projAtivos=projetos.filter(p=>p.status==='ativo');
-  if(projAtivos.length>0)adicionarNotif(`${projAtivos.length} projeto(s) em andamento`,'info','🏗️');
+
+function navegarNotif(aba){
+  document.getElementById('notif-panel').classList.remove('open');
+  // Find the right tab
+  let tabEl = null;
+  if(aba === 'manutencao'){
+    tabEl = Array.from(document.querySelectorAll('.tab-modulo')).find(t=>t.textContent.includes('Manutenção'));
+    if(tabEl){ tabEl.click(); return; }
+  }
+  const tabs = document.querySelectorAll('.tab:not(.tab-modulo)');
+  const tabMap = {dashboard:0, estoque:1, movimentacao:2, historico:3, reposicao:4, projetos:5, fornecedores:6, relatorios:7};
+  const idx = tabMap[aba];
+  if(idx !== undefined && tabs[idx]){ switchTab(aba, tabs[idx]); }
 }
+// ===================== FIM NOTIFICAÇÕES CLICÁVEIS =====================
+
 function getItensParados(){
   if(!historico.length)return[];
   const hoje=new Date();const limite=30*24*60*60*1000;
@@ -1398,8 +1636,85 @@ async function salvarProjeto(){
 }
 async function deletarProj(id){if(!confirm('Remover?'))return;try{await api({action:'deleteProjeto',id});showToast('Removido.');registrarLog('exclusao','Projeto removido','🗑️');await carregarDados();}catch(e){showToast('Erro.','err');}}
 
-function renderFornecedores(){const q=document.getElementById('forn-search').value.toLowerCase();const cf=document.getElementById('forn-cf').value;const showTel=document.getElementById('fcol-tel')?.checked!==false;const showEmail=document.getElementById('fcol-email')?.checked!==false;const showCat=document.getElementById('fcol-cat')?.checked!==false;const showObs=document.getElementById('fcol-obs')?.checked!==false;const fil=fornecedores.filter(f=>(!cf||f.categoria===cf)&&(f.nome.toLowerCase().includes(q)||(f.tel||'').toLowerCase().includes(q)));document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`<div class="forn-card" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${f.nome}</div><div style="font-size:12px;color:#6b7280;margin-top:2px">${showTel&&f.tel?'📞 '+f.tel+' ':''}${showEmail&&f.email?'· ✉️ '+f.email+' ':''}${showCat&&f.categoria?'· '+CATS[f.categoria]?.icon+' '+CATS[f.categoria]?.label:''}</div>${showObs&&f.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">📝 ${f.obs}</div>`:''}</div><div style="display:flex;gap:6px">${pode('editar')?`<button class="btn-blue" onclick="abrirModalForn('${f.id}')">✏️</button>`:''}${pode('deletar')?`<button class="btn-red" onclick="deletarForn('${f.id}')">🗑️</button>`:''}</div></div>`).join(''):'<div class="empty">Nenhum fornecedor encontrado.</div>';}
-function abrirModalForn(id){editFornId=id||null;const f=id?fornecedores.find(x=>x.id===id):null;document.getElementById('mf-title').textContent=f?'✏️ Editar Fornecedor':'➕ Novo Fornecedor';document.getElementById('mf-nome').value=f?.nome||'';document.getElementById('mf-tel').value=f?.tel||'';document.getElementById('mf-email').value=f?.email||'';document.getElementById('mf-cat').value=f?.categoria||'';document.getElementById('mf-obs').value=f?.obs||'';document.getElementById('modal-forn').classList.add('open');}
+function renderFornecedores(){
+  const q=document.getElementById('forn-search').value.toLowerCase();
+  const cf=document.getElementById('forn-cf').value;
+  const showTel=document.getElementById('fcol-tel')?.checked!==false;
+  const showEmail=document.getElementById('fcol-email')?.checked!==false;
+  const showCat=document.getElementById('fcol-cat')?.checked!==false;
+  const showObs=document.getElementById('fcol-obs')?.checked!==false;
+  const fil=fornecedores.filter(f=>(!cf||f.categoria===cf)&&(f.nome.toLowerCase().includes(q)||(f.tel||'').toLowerCase().includes(q)));
+  document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`
+    <div class="forn-card" style="cursor:pointer;transition:box-shadow .2s" onclick="abrirDetalhesForn('${f.id}')" onmouseover="this.style.boxShadow='0 2px 8px #16a34a22'" onmouseout="this.style.boxShadow=''">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:14px">${f.nome}</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">
+            ${showTel&&f.tel?'📞 '+f.tel+' ':''}
+            ${showEmail&&f.email?'· ✉️ '+f.email+' ':''}
+            ${showCat&&f.categoria?'· '+(CATS[f.categoria]?.icon||'')+(CATS[f.categoria]?.label||f.categoria):''}
+          </div>
+          ${showObs&&f.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">📝 ${f.obs}</div>`:''}
+        </div>
+        <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
+          ${pode('editar')?`<button class="btn-blue" onclick="abrirModalForn('${f.id}')">✏️ Editar</button>`:''}
+          ${pode('deletar')?`<button class="btn-red" onclick="deletarForn('${f.id}')">🗑️</button>`:''}
+        </div>
+      </div>
+    </div>`).join(''):'<div class="empty">Nenhum fornecedor encontrado.</div>';
+}
+
+function abrirDetalhesForn(id){
+  const f = fornecedores.find(x=>x.id===id);
+  if(!f) return;
+  const cat = CATS[f.categoria];
+  const movsForn = historico.filter(h => (h.obs||'').toLowerCase().includes(f.nome.toLowerCase()) || produtos.filter(p=>p.fornecedor===f.nome).map(p=>p.id).includes(h.itemId));
+  const itensForn = produtos.filter(p => p.fornecedor === f.nome);
+  
+  // Create detail modal content
+  let html = `
+    <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:20px;font-weight:800;color:#14532d;margin-bottom:8px">${f.nome}</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
+        ${f.tel?`<span>📞 ${f.tel}</span>`:''}
+        ${f.email?`<span>✉️ ${f.email}</span>`:''}
+        ${cat?`<span>${cat.icon} ${cat.label}</span>`:''}
+      </div>
+      ${f.obs?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📝 ${f.obs}</div>`:''}
+    </div>
+    <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Itens fornecidos (${itensForn.length})</div>
+    ${itensForn.length?itensForn.map(p=>`
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
+        <span>${CATS[p.categoria]?.icon||''} ${p.nome}</span>
+        <span style="color:#16a34a;font-weight:700">${p.quantidade} ${p.unidade}</span>
+      </div>`).join(''):'<div style="color:#9ca3af;font-size:12px">Nenhum item cadastrado para este fornecedor.</div>'}`;
+
+  // Show in a simple alert-style modal using existing modal
+  document.getElementById('mm-title').textContent = '🏭 ' + f.nome;
+  document.getElementById('mm-sub').textContent = cat ? cat.icon + ' ' + cat.label : '';
+  document.querySelector('#modal-mov .tipo-btns').style.display = 'none';
+  document.querySelector('#modal-mov [style*="grid-template-columns"]').style.display = 'none';
+  document.querySelector('#modal-mov .fg:nth-child(3)').style.display = 'none';
+  document.querySelector('#modal-mov .fg:nth-child(4)').style.display = 'none';
+  document.querySelector('#modal-mov .fg:nth-child(5)').style.display = 'none';
+  
+  // Better: use a dedicated approach
+  mostrarDetalhesFornModal(f, itensForn);
+}
+function abrirModalForn(id){
+  editFornId = id || null;
+  const f = id ? fornecedores.find(x => x.id === id) : null;
+  document.getElementById('mf-title').textContent = f ? '✏️ Editar Fornecedor' : '➕ Novo Fornecedor';
+  document.getElementById('mf-nome').value = f ? f.nome : '';
+  document.getElementById('mf-tel').value = f ? (f.tel || '') : '';
+  document.getElementById('mf-email').value = f ? (f.email || '') : '';
+  document.getElementById('mf-obs').value = f ? (f.obs || '') : '';
+  // Update category select with current categories
+  const sel = document.getElementById('mf-cat');
+  sel.innerHTML = '<option value="">Selecione...</option>' + 
+    Object.entries(CATS).map(([id,c]) => `<option value="${id}" ${f?.categoria===id?'selected':''}>${c.icon} ${c.label}</option>`).join('');
+  document.getElementById('modal-forn').classList.add('open');
+}
 async function salvarFornecedor(){const nome=document.getElementById('mf-nome').value.trim();if(!nome)return showToast('Informe o nome.','err');const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};try{if(editFornId){await api({action:'editFornecedor',...f});}else{await api({action:'addFornecedor',...f});}showToast(editFornId?'Atualizado!':'Cadastrado!');registrarLog('cadastro',`Fornecedor ${editFornId?'atualizado':'cadastrado'}: ${nome}`,'🏭');fecharModal('modal-forn');await carregarDados();}catch(e){showToast('Erro ao salvar.','err');}}
 async function deletarForn(id){if(!confirm('Remover?'))return;try{await api({action:'deleteFornecedor',id});showToast('Removido.');await carregarDados();}catch(e){showToast('Erro.','err');}}
 
@@ -1819,6 +2134,7 @@ function initConfiguracoes(){
   carregarCategorias();
   carregarModulos();
   carregarUnidades();
+  carregarManutencoes();
   renderCategorias();
   renderMotivos();
   atualizarTabsModulos();
@@ -2047,25 +2363,32 @@ function atualizarTabsModulos(){
   const mainDiv = document.querySelector('.main');
   
   modulos.filter(m=>m.ativo).forEach(m=>{
-    // Add tab button
     const btn = document.createElement('button');
     btn.className = 'tab tab-modulo';
     btn.innerHTML = `${m.icon} ${m.nome}`;
     btn.onclick = function(){ switchTab('mod-'+m.id, this); };
     tabsInner.appendChild(btn);
     
-    // Add section
     const sec = document.createElement('div');
     sec.className = 'section section-modulo';
     sec.id = 'sec-mod-'+m.id;
-    sec.innerHTML = `
-      <div class="card">
-        <div class="card-title">${m.icon} ${m.nome}</div>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>
-        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">
-          💡 Módulo em desenvolvimento. Em breve você poderá personalizar os campos e funcionalidades deste módulo nas Configurações.
-        </div>
-      </div>`;
+    
+    // Render specific content based on module id
+    if(m.id === 'manutencao'){
+      sec.innerHTML = renderModuloManutencao();
+    } else {
+      sec.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-title" style="margin:0">${m.icon} ${m.nome}</div>
+            <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>
+          </div>
+          <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">
+            💡 Este módulo será personalizado em breve. Use as Configurações para definir os campos necessários.
+          </div>
+        </div>`;
+    }
     mainDiv.appendChild(sec);
   });
 }
