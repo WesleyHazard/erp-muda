@@ -345,7 +345,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 
 <div class="modal-bg" id="modal-proj">
-<div class="modal" style="max-width:560px">
+<div class="modal" style="max-width:640px">
   <div class="modal-header"><div class="modal-title" id="mp-title">Novo Projeto</div><button class="modal-close" onclick="fecharModal('modal-proj')">×</button></div>
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
     <div class="fg"><label>Nome do Projeto *</label><input type="text" id="mp-nome"></div>
@@ -362,8 +362,39 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <select id="mp-status"><option value="ativo">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select>
     </div>
     <div class="fg"><label>Observações Gerais</label><input type="text" id="mp-obs"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-confirmar" onclick="salvarProjeto()">Salvar</button>
+
+    <!-- MATERIAIS DO PROJETO -->
+    <div style="border-top:1px solid #e5e7eb;padding-top:12px;margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700;font-size:13px;color:#14532d">📦 Materiais do Projeto</div>
+        <button class="btn-green" style="font-size:12px;padding:5px 10px" onclick="abrirAddMatProjeto()">+ Adicionar</button>
+      </div>
+      
+      <!-- Form add material -->
+      <div id="mp-add-mat-form" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:12px;margin-bottom:8px">
+        <div style="position:relative;margin-bottom:8px">
+          <input type="text" id="mp-mat-search" placeholder="🔍 Buscar item no estoque..." 
+            style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"
+            oninput="filtrarMatProjeto()" onblur="setTimeout(()=>{const d=document.getElementById('mp-mat-drop');if(d)d.style.display='none'},200)">
+          <div id="mp-mat-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 12px #0002;z-index:300;max-height:160px;overflow-y:auto"></div>
+        </div>
+        <div id="mp-mat-sel" style="display:none;background:#fff;border:1px solid #bbf7d0;border-radius:7px;padding:7px 10px;margin-bottom:8px;font-size:12px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="fg"><label>Qtd. Necessária *</label><input type="number" id="mp-mat-qty" placeholder="0" min="1"></div>
+          <div class="fg"><label>Observação</label><input type="text" id="mp-mat-obs" placeholder="Opcional"></div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-green" style="font-size:12px" onclick="confirmarAddMatProjeto()">Adicionar</button>
+          <button class="btn-gray" style="font-size:12px" onclick="cancelarAddMatProjeto()">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Lista materiais -->
+      <div id="mp-lista-mats" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-confirmar" onclick="salvarProjeto()">Salvar Projeto</button>
       <button class="btn-gray" onclick="fecharModal('modal-proj')">Cancelar</button>
     </div>
   </div>
@@ -1660,6 +1691,10 @@ function abrirModalProj(id){
   document.getElementById('mp-sep').value=p?.responsavelSep||'';
   document.getElementById('mp-status').value=p?.status||'ativo';
   document.getElementById('mp-obs').value=p?.obs||'';
+  // Load existing materials
+  mpMateriais = p ? (p.materiais||[]).map(m=>({...m, estoqueAtual: produtos.find(x=>String(x.id)===String(m.itemId))?.quantidade||0})) : [];
+  renderMpLista();
+  document.getElementById('mp-add-mat-form').style.display='none';
   document.getElementById('modal-proj').classList.add('open');
 }
 
@@ -1692,6 +1727,11 @@ async function salvarProjeto(){
   const cliente=document.getElementById('mp-cliente').value.trim();
   if(!nome||!cliente)return showToast('Preencha nome e cliente.','err');
   const existing=editProjId?projetos.find(x=>String(x.id)===String(editProjId)):null;
+  // Merge mpMateriais with existing (preserve status/debitado from existing)
+  const materiaisFinais = mpMateriais.map(m=>{
+    const old = existing?.materiais?.find(e=>String(e.itemId)===String(m.itemId)&&e.nome===m.nome);
+    return old ? {...m, status:old.status||'pendente', debitado:old.debitado||false} : m;
+  });
   const p={
     id:editProjId||Date.now().toString(),
     nome,cliente,
@@ -1701,7 +1741,7 @@ async function salvarProjeto(){
     responsavelSep:document.getElementById('mp-sep').value,
     status:document.getElementById('mp-status').value,
     obs:document.getElementById('mp-obs').value,
-    materiais:JSON.stringify(existing?.materiais||[])
+    materiais:JSON.stringify(materiaisFinais)
   };
   try{
     if(editProjId){await api({action:'editProjeto',...p});}
@@ -2836,6 +2876,121 @@ function abrirAddMaterial(){
   document.getElementById('mat-est-search').focus();
 }
 // ===================== FIM MATERIAL ESTOQUE =====================
+
+
+// ===================== MATERIAIS NO MODAL DE PROJETO =====================
+let mpMatSelecionado = null;
+let mpMateriais = []; // temp list while creating/editing project
+
+function abrirAddMatProjeto(){
+  mpMatSelecionado = null;
+  document.getElementById('mp-add-mat-form').style.display = 'block';
+  document.getElementById('mp-mat-search').value = '';
+  document.getElementById('mp-mat-qty').value = '';
+  document.getElementById('mp-mat-obs').value = '';
+  document.getElementById('mp-mat-sel').style.display = 'none';
+  document.getElementById('mp-mat-drop').style.display = 'none';
+  document.getElementById('mp-mat-search').focus();
+}
+
+function cancelarAddMatProjeto(){
+  mpMatSelecionado = null;
+  document.getElementById('mp-add-mat-form').style.display = 'none';
+}
+
+function filtrarMatProjeto(){
+  const q = document.getElementById('mp-mat-search').value.toLowerCase();
+  const drop = document.getElementById('mp-mat-drop');
+  if(!q){ drop.style.display='none'; return; }
+  const res = produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);
+  drop.innerHTML = res.length ? res.map(p=>`
+    <div style="padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center"
+      onmousedown="selecionarMatProjeto('${p.id}')">
+      <div>
+        <div style="font-weight:600">${p.nome}</div>
+        <div style="font-size:11px;color:#6b7280">${CATS[p.categoria]?.label||p.categoria}</div>
+      </div>
+      <div style="text-align:right;font-size:11px">
+        <div style="font-weight:700;color:#16a34a">${p.quantidade} ${p.unidade}</div>
+        <div style="color:#9ca3af">em estoque</div>
+      </div>
+    </div>`).join('') 
+    : '<div style="padding:8px 10px;color:#9ca3af;font-size:12px">Nenhum item encontrado</div>';
+  drop.style.display = 'block';
+}
+
+function selecionarMatProjeto(id){
+  const p = produtos.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  mpMatSelecionado = p;
+  document.getElementById('mp-mat-search').value = p.nome;
+  document.getElementById('mp-mat-drop').style.display = 'none';
+  const sel = document.getElementById('mp-mat-sel');
+  sel.style.display = 'block';
+  sel.innerHTML = `
+    <div style="font-weight:700">${p.nome}</div>
+    <div style="color:#16a34a;font-size:12px">📦 Saldo atual: <strong>${p.quantidade} ${p.unidade}</strong></div>
+    ${p.localizacao?`<div style="color:#7c3aed;font-size:11px">📍 ${p.localizacao}</div>`:''}`;
+  document.getElementById('mp-mat-qty').focus();
+}
+
+function confirmarAddMatProjeto(){
+  if(!mpMatSelecionado) return showToast('Busque e selecione um item do estoque.','err');
+  const qty = Number(document.getElementById('mp-mat-qty').value);
+  if(!qty||qty<=0) return showToast('Informe a quantidade necessária.','err');
+  const obs = document.getElementById('mp-mat-obs').value;
+  const estoque = Number(mpMatSelecionado.quantidade);
+  
+  // Determine availability status
+  let disponivel, status;
+  if(estoque >= qty){ disponivel = '✅'; status = 'ok'; }
+  else if(estoque > 0){ disponivel = '🟡'; status = 'parcial'; }
+  else { disponivel = '🔴'; status = 'falta'; }
+
+  mpMateriais.push({
+    nome: mpMatSelecionado.nome,
+    qty, unidade: mpMatSelecionado.unidade,
+    obs, itemId: mpMatSelecionado.id,
+    estoqueAtual: estoque,
+    status: 'pendente', debitado: false
+  });
+  cancelarAddMatProjeto();
+  renderMpLista();
+}
+
+function removerMatProjeto(idx){
+  mpMateriais.splice(idx,1);
+  renderMpLista();
+}
+
+function renderMpLista(){
+  const el = document.getElementById('mp-lista-mats');
+  if(!mpMateriais.length){
+    el.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:8px 0">Nenhum material adicionado ainda.</div>';
+    return;
+  }
+  el.innerHTML = mpMateriais.map((m,i)=>{
+    const est = Number(m.estoqueAtual||0);
+    const falta = Math.max(0, m.qty - est);
+    let badge, cor;
+    if(est >= m.qty){ badge='✅ OK'; cor='#16a34a'; }
+    else if(est > 0){ badge=`🟡 Parcial (faltam ${falta} ${m.unidade})`; cor='#d97706'; }
+    else { badge=`🔴 Sem estoque`; cor='#dc2626'; }
+    
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:5px;gap:8px">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${m.nome}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">
+          Precisa: <strong>${m.qty} ${m.unidade}</strong> · Tem: <strong style="color:${cor}">${est} ${m.unidade}</strong>
+          ${m.obs?` · ${m.obs}`:''}
+        </div>
+        <div style="font-size:11px;font-weight:700;color:${cor};margin-top:2px">${badge}</div>
+      </div>
+      <button class="btn-red" style="font-size:11px;padding:3px 7px;flex-shrink:0" onclick="removerMatProjeto(${i})">🗑️</button>
+    </div>`;
+  }).join('');
+}
+// ===================== FIM MATERIAIS MODAL PROJETO =====================
 
 // ===================== FIM FASE 2B =====================
 
