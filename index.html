@@ -485,15 +485,41 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     </div>
   </div>
   <div id="add-material-form" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:12px">
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">
-      <div class="fg"><label>Material *</label><input type="text" id="mat-nome" placeholder="Nome do material"></div>
-      <div class="fg"><label>Qtd. Necessária *</label><input type="number" id="mat-qty" placeholder="0"></div>
-      <div class="fg"><label>Unidade</label><select id="mat-un"><option>un</option><option>m²</option><option>m</option><option>kg</option><option>g</option><option>L</option><option>ml</option><option>cx</option><option>pct</option><option>hastes</option><option>maços</option></select></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn-green" id="mat-tab-estoque" style="font-size:12px" onclick="setMatTab('estoque')">📦 Do Estoque</button>
+      <button class="btn-gray" id="mat-tab-manual" style="font-size:12px" onclick="setMatTab('manual')">✏️ Manual</button>
     </div>
-    <div class="fg" style="margin-bottom:8px"><label>Observação</label><input type="text" id="mat-obs" placeholder="Ex: cor específica, tamanho, etc."></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-green" style="font-size:12px" onclick="salvarMaterial()">Adicionar</button>
-      <button class="btn-gray" style="font-size:12px" onclick="cancelarAddMaterial()">Cancelar</button>
+    <!-- Do estoque -->
+    <div id="mat-form-estoque">
+      <div class="fg" style="margin-bottom:8px">
+        <label>Buscar no Estoque *</label>
+        <div style="position:relative">
+          <input type="text" id="mat-est-search" placeholder="Digite o nome do item..." 
+            style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"
+            oninput="filtrarEstoqueMat()" onblur="setTimeout(()=>document.getElementById('mat-est-drop').style.display='none',200)">
+          <div id="mat-est-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 12px #0002;z-index:200;max-height:180px;overflow-y:auto"></div>
+        </div>
+      </div>
+      <div id="mat-est-selected" style="display:none;background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px;margin-bottom:8px;font-size:12px"></div>
+      <div class="fg" style="margin-bottom:8px"><label>Qtd. Necessária *</label><input type="number" id="mat-qty-est" placeholder="0" style="max-width:120px"></div>
+      <div class="fg" style="margin-bottom:8px"><label>Observação</label><input type="text" id="mat-obs-est" placeholder="Ex: cor específica, tamanho..."></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-green" style="font-size:12px" onclick="salvarMaterialEstoque()">Adicionar</button>
+        <button class="btn-gray" style="font-size:12px" onclick="cancelarAddMaterial()">Cancelar</button>
+      </div>
+    </div>
+    <!-- Manual -->
+    <div id="mat-form-manual" style="display:none">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="fg"><label>Material *</label><input type="text" id="mat-nome" placeholder="Nome do material"></div>
+        <div class="fg"><label>Qtd. Necessária *</label><input type="number" id="mat-qty" placeholder="0"></div>
+        <div class="fg"><label>Unidade</label><select id="mat-un"><option>un</option><option>m²</option><option>m</option><option>kg</option><option>g</option><option>L</option><option>ml</option><option>cx</option><option>pct</option><option>hastes</option><option>maços</option></select></div>
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label>Observação</label><input type="text" id="mat-obs" placeholder="Ex: cor específica, tamanho, etc."></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-green" style="font-size:12px" onclick="salvarMaterial()">Adicionar</button>
+        <button class="btn-gray" style="font-size:12px" onclick="cancelarAddMaterial()">Cancelar</button>
+      </div>
     </div>
   </div>
   <div id="mos-prog" style="margin-bottom:12px;display:none">
@@ -562,6 +588,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <button class="btn-gray" onclick="fecharModal('modal-manutencao')">Cancelar</button>
     </div>
   </div>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-proj-det">
+<div class="modal" style="max-width:700px">
+  <div class="modal-header">
+    <div class="modal-title" id="mpd-title">🏗️ Projeto</div>
+    <button class="modal-close" onclick="fecharModal('modal-proj-det')">×</button>
+  </div>
+  <div id="mpd-content" style="margin-top:12px"></div>
 </div>
 </div>
 <!-- SISTEMA -->
@@ -1555,7 +1591,25 @@ function renderProjetos(){
   const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};
   const slc={ativo:'ps-ativo',concluido:'ps-concluido',pausado:'ps-pausado'};
   const hoje=new Date();
-  const fmtData=d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'';
+  const fmtData=d=>{
+    if(!d) return '';
+    try{
+      // Handle various date formats from Google Sheets
+      const s = String(d).trim();
+      if(!s) return '';
+      // Already BR format dd/mm/yyyy
+      if(/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0,10);
+      // ISO format yyyy-mm-dd
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+        const [y,m,day] = s.substring(0,10).split('-');
+        return `${day}/${m}/${y}`;
+      }
+      // Sheets Date object serialized
+      const dt = new Date(s);
+      if(!isNaN(dt.getTime())) return dt.toLocaleDateString('pt-BR');
+      return s;
+    }catch(e){return String(d);}
+  };
   document.getElementById('lista-projetos').innerHTML=fil.length?fil.map(p=>{
     const mats=p.materiais||[];
     const sepCount=mats.filter(m=>m.status==='separado').length;
@@ -1563,7 +1617,7 @@ function renderProjetos(){
     const pct=mats.length?Math.round(sepCount/mats.length*100):0;
     const entrega=p.dataEntrega?new Date(p.dataEntrega+'T00:00:00'):null;
     const vencendo=entrega&&entrega<hoje&&p.status!=='concluido';
-    return `<div class="proj-card-new ${p.status||'ativo'}">
+    return `<div class="proj-card-new ${p.status||'ativo'}" onclick="abrirDetalhesProjeto('${p.id}')" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
         <div style="flex:1">
           <div style="font-weight:700;font-size:15px">${p.nome}</div>
@@ -1578,10 +1632,10 @@ function renderProjetos(){
         </div>
         <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
           <span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>
-          <button class="btn-green" style="font-size:11px;padding:5px 10px" onclick="abrirOS('${p.id}')">📋 OS</button>
-          ${pode('editar')?`<button class="btn-blue" onclick="abrirModalProj('${p.id}')">✏️</button>`:''}
-          ${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="abrirOrcamento('${p.id}')">💰</button>`:''}
-          ${pode('deletar')?`<button class="btn-red" onclick="deletarProj('${p.id}')">🗑️</button>`:''}
+          <button class="btn-green" style="font-size:11px;padding:5px 10px" onclick="event.stopPropagation();abrirOS('${p.id}')">📋 OS</button>
+          ${pode('editar')?`<button class="btn-blue" onclick="event.stopPropagation();abrirModalProj('${p.id}')">✏️</button>`:''}
+          ${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="event.stopPropagation();abrirOrcamento('${p.id}')">💰</button>`:''}
+          ${pode('deletar')?`<button class="btn-red" onclick="event.stopPropagation();deletarProj('${p.id}')">🗑️</button>`:''}
         </div>
       </div>
       ${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}
@@ -1920,7 +1974,7 @@ function salvarOrcamento(){
   const previsto = document.getElementById('mo-previsto').value;
   projetos = projetos.map(p => p.id === orcamentoProjetoId ? {...p, orcamentoPrevisto: previsto} : p);
   // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
   showToast('Orçamento salvo!');
   registrarLog('edicao', `Orçamento do projeto atualizado`, '💰');
   fecharModal('modal-orcamento');
@@ -1941,7 +1995,21 @@ function abrirOS(id){
   const hoje = new Date();
   const entrega = p.dataEntrega ? new Date(p.dataEntrega) : null;
   const vencendo = entrega && entrega < hoje && p.status !== 'concluido';
-  const fmtData = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtData = d => {
+    if(!d) return '—';
+    try{
+      const s = String(d).trim();
+      if(!s) return '—';
+      if(/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0,10);
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+        const [y,m,day] = s.substring(0,10).split('-');
+        return `${day}/${m}/${y}`;
+      }
+      const dt = new Date(s);
+      if(!isNaN(dt.getTime())) return dt.toLocaleDateString('pt-BR');
+      return s;
+    }catch(e){return String(d);}
+  };
   
   document.getElementById('mos-header-info').innerHTML = `
     <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">
@@ -1984,14 +2052,17 @@ function renderMateriais(p){
         <div style="flex:1;min-width:140px">
           <div style="font-weight:700;font-size:13px">${m.nome}</div>
           <div style="font-size:12px;color:#6b7280;margin-top:2px">
-            Qtd: <strong>${m.qty} ${m.unidade}</strong>
+            Qtd: <strong>${m.qty} ${m.unidade||'un'}</strong>
+            ${m.itemId?`<span style="color:#16a34a;font-size:10px;font-weight:700;margin-left:6px">📦 Estoque: ${produtos.find(x=>x.id==m.itemId)?.quantidade||'?'} ${m.unidade||''}</span>`:'<span style="font-size:10px;color:#9ca3af;margin-left:4px">(manual)</span>'}
             ${m.obs?` · 💬 ${m.obs}`:''}
           </div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
-          <button class="mat-status-btn separado ${m.status==='separado'?'active-separado':''}" onclick="setMatStatus('${osProjetoId}',${i},'separado')">✅ Separado</button>
-          <button class="mat-status-btn faltando ${m.status==='faltando'?'active-faltando':''}" onclick="setMatStatus('${osProjetoId}',${i},'faltando')">❌ Faltando</button>
-          <button class="mat-status-btn substituido ${m.status==='substituido'?'active-substituido':''}" onclick="setMatStatus('${osProjetoId}',${i},'substituido')">🔄 Substituído</button>
+          <button class="mat-status-btn separado ${m.status==='separado'?'active-separado':''}" onclick="setMatStatus('${osProjetoId}',${i},'separado')">✅ Sep.</button>
+          <button class="mat-status-btn faltando ${m.status==='faltando'?'active-faltando':''}" onclick="setMatStatus('${osProjetoId}',${i},'faltando')">❌ Falta</button>
+          <button class="mat-status-btn substituido ${m.status==='substituido'?'active-substituido':''}" onclick="setMatStatus('${osProjetoId}',${i},'substituido')">🔄 Sub.</button>
+          ${m.itemId&&m.status==='separado'&&!m.debitado?`<button class="btn-out" style="font-size:11px;padding:3px 7px" onclick="debitarItemEstoque('${osProjetoId}',${i})" title="Debitar do estoque">📤 Debitar</button>`:''}
+          ${m.debitado?`<span style="font-size:10px;color:#16a34a;font-weight:700">✅ Debitado</span>`:''}
           ${pode('editar')?`<button class="btn-gray" style="font-size:11px;padding:3px 7px" onclick="editarObsMat('${osProjetoId}',${i})">💬</button>`:''}
           ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerMat('${osProjetoId}',${i})">🗑️</button>`:''}
         </div>
@@ -2010,7 +2081,7 @@ function setMatStatus(projId, idx, status){
   if(!p || !p.materiais) return;
   p.materiais[idx].status = p.materiais[idx].status === status ? 'pendente' : status;
   // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
   renderMateriais(p);
   renderProjetos();
 }
@@ -2025,7 +2096,7 @@ function salvarObsMat(projId, idx, val){
   if(!p || !p.materiais) return;
   p.materiais[idx].obs = val;
   // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
   renderMateriais(p);
 }
 
@@ -2035,7 +2106,7 @@ function removerMat(projId, idx){
   if(!p) return;
   p.materiais.splice(idx, 1);
   // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
   renderMateriais(p);
   renderProjetos();
 }
@@ -2068,7 +2139,7 @@ function salvarMaterial(){
     status: 'pendente'
   });
   // sync to sheets in background
-  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)api({action:'editProjeto',id:_p.id,nome:_p.nome,cliente:_p.cliente,responsavel:_p.responsavel||'',dataInicio:_p.dataInicio||'',dataEntrega:_p.dataEntrega||'',responsavelSep:_p.responsavelSep||'',status:_p.status||'ativo',obs:_p.obs||'',orcamentoPrevisto:_p.orcamentoPrevisto||'',materiais:JSON.stringify(_p.materiais||[])});}catch(e){}
+  try{const _p=projetos.find(x=>x.id===osProjetoId||x.id===orcamentoProjetoId);if(_p)syncProjetoSheets(_p);}catch(e){}
   cancelarAddMaterial();
   renderMateriais(p);
   renderProjetos();
@@ -2078,7 +2149,21 @@ function salvarMaterial(){
 function imprimirOS(){
   const p = projetos.find(x => x.id === osProjetoId);
   if(!p) return;
-  const fmtData = d => d ? new Date(d+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const fmtData = d => {
+    if(!d) return '—';
+    try{
+      const s = String(d).trim();
+      if(!s) return '—';
+      if(/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0,10);
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)){
+        const [y,m,day] = s.substring(0,10).split('-');
+        return `${day}/${m}/${y}`;
+      }
+      const dt = new Date(s);
+      if(!isNaN(dt.getTime())) return dt.toLocaleDateString('pt-BR');
+      return s;
+    }catch(e){return String(d);}
+  };
   const statusLabel = {separado:'✅ Separado', faltando:'❌ Faltando', substituido:'🔄 Substituído', pendente:'⏳ Pendente'};
   const mats = p.materiais || [];
   const separados = mats.filter(m => m.status === 'separado').length;
@@ -2571,6 +2656,169 @@ function aplicarAparencia(){
 // ===================== FIM CONFIG EXTRA =====================
 
 // ===================== FIM CONFIGURAÇÕES =====================
+
+
+// ===================== PROJETO DETALHES =====================
+function abrirDetalhesProjeto(id){
+  const p = projetos.find(x => x.id === id);
+  if(!p) return;
+  const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};
+  const mats = p.materiais || [];
+  const sepCount = mats.filter(m=>m.status==='separado').length;
+  const faltCount = mats.filter(m=>m.status==='faltando').length;
+  const pct = mats.length ? Math.round(sepCount/mats.length*100) : 0;
+  
+  const fmtD = d => {
+    if(!d) return '—';
+    try{
+      const s = String(d).trim();
+      if(/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0,10);
+      if(/^\d{4}-\d{2}-\d{2}/.test(s)){const [y,m,day]=s.substring(0,10).split('-');return `${day}/${m}/${y}`;}
+      const dt=new Date(s);if(!isNaN(dt.getTime()))return dt.toLocaleDateString('pt-BR');
+      return s;
+    }catch(e){return String(d);}
+  };
+
+  document.getElementById('mpd-title').textContent = '🏗️ ' + p.nome;
+  document.getElementById('mpd-content').innerHTML = `
+    <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:8px">
+        <div><div style="font-size:10px;color:#6b7280;font-weight:700">CLIENTE</div><div>👤 ${p.cliente}</div></div>
+        ${p.responsavel?`<div><div style="font-size:10px;color:#6b7280;font-weight:700">RESPONSÁVEL</div><div>🧑 ${p.responsavel}</div></div>`:''}
+        ${p.responsavelSep?`<div><div style="font-size:10px;color:#6b7280;font-weight:700">SEPARAÇÃO</div><div>👷 ${p.responsavelSep}</div></div>`:''}
+        <div><div style="font-size:10px;color:#6b7280;font-weight:700">STATUS</div><div>${sl2[p.status]||p.status}</div></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">
+        ${p.dataInicio?`<span class="data-badge">📅 Início: ${fmtD(p.dataInicio)}</span>`:''}
+        ${p.dataEntrega?`<span class="data-badge">🚚 Entrega: ${fmtD(p.dataEntrega)}</span>`:''}
+      </div>
+      ${p.obs?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📝 ${p.obs}</div>`:''}
+    </div>
+    ${mats.length>0?`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px">
+        <span>📦 ${sepCount}/${mats.length} separados · ${faltCount>0?`<span style="color:#dc2626">❌ ${faltCount} faltando</span>`:''}</span>
+        <span style="font-weight:700;color:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}">${pct}%</span>
+      </div>
+      <div class="proj-prog-bar"><div class="proj-prog-fill" style="width:${pct}%;background:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}"></div></div>
+    </div>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn-green" onclick="fecharModal('modal-proj-det');abrirOS('${p.id}')">📋 Abrir OS</button>
+      ${pode('editar')?`<button class="btn-blue" onclick="fecharModal('modal-proj-det');abrirModalProj('${p.id}')">✏️ Editar</button>`:''}
+      ${pode('editar')?`<button class="btn-green" style="background:#ca8a04" onclick="fecharModal('modal-proj-det');abrirOrcamento('${p.id}')">💰 Orçamento</button>`:''}
+    </div>`;
+  document.getElementById('modal-proj-det').classList.add('open');
+}
+
+// ===================== MATERIAL DO ESTOQUE =====================
+let matEstSelecionado = null;
+
+function setMatTab(tab){
+  document.getElementById('mat-form-estoque').style.display = tab==='estoque' ? 'block' : 'none';
+  document.getElementById('mat-form-manual').style.display = tab==='manual' ? 'block' : 'none';
+  document.getElementById('mat-tab-estoque').className = tab==='estoque' ? 'btn-green' : 'btn-gray';
+  document.getElementById('mat-tab-manual').className = tab==='manual' ? 'btn-green' : 'btn-gray';
+  document.getElementById('mat-tab-estoque').style.fontSize = '12px';
+  document.getElementById('mat-tab-manual').style.fontSize = '12px';
+}
+
+function filtrarEstoqueMat(){
+  const q = document.getElementById('mat-est-search').value.toLowerCase();
+  const drop = document.getElementById('mat-est-drop');
+  if(!q){ drop.style.display='none'; return; }
+  const res = produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);
+  drop.innerHTML = res.length ? res.map(p=>`
+    <div style="padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6" 
+      onmousedown="selecionarItemMat('${p.id}')">
+      <div>${p.nome}</div>
+      <div style="font-size:11px;color:#6b7280">Saldo: <strong>${p.quantidade} ${p.unidade}</strong> · ${CATS[p.categoria]?.label||p.categoria}</div>
+    </div>`).join('') : '<div style="padding:8px 10px;color:#9ca3af;font-size:12px">Nenhum item encontrado</div>';
+  drop.style.display = 'block';
+}
+
+function selecionarItemMat(id){
+  const p = produtos.find(x=>x.id===id);
+  if(!p) return;
+  matEstSelecionado = p;
+  document.getElementById('mat-est-search').value = p.nome;
+  document.getElementById('mat-est-drop').style.display = 'none';
+  document.getElementById('mat-est-selected').style.display = 'block';
+  document.getElementById('mat-est-selected').innerHTML = `
+    <div style="font-weight:700">${p.nome}</div>
+    <div style="color:#16a34a">📦 Saldo atual: ${p.quantidade} ${p.unidade}</div>
+    ${p.localizacao?`<div style="color:#7c3aed;font-size:11px">📍 ${p.localizacao}</div>`:''}`;
+  // Set qty unit
+  document.getElementById('mat-qty-est').focus();
+}
+
+function salvarMaterialEstoque(){
+  if(!matEstSelecionado) return showToast('Selecione um item do estoque.','err');
+  const qty = document.getElementById('mat-qty-est').value;
+  if(!qty||Number(qty)<=0) return showToast('Informe a quantidade.','err');
+  const p = projetos.find(x=>x.id===osProjetoId);
+  if(!p) return;
+  if(!p.materiais) p.materiais = [];
+  p.materiais.push({
+    nome: matEstSelecionado.nome,
+    qty: Number(qty),
+    unidade: matEstSelecionado.unidade,
+    obs: document.getElementById('mat-obs-est').value,
+    status: 'pendente',
+    itemId: matEstSelecionado.id,
+    debitado: false
+  });
+  syncProjetoSheets(p);
+  cancelarAddMaterial();
+  renderMateriais(p);
+  renderProjetos();
+  showToast('Material adicionado do estoque!');
+}
+
+async function debitarItemEstoque(projId, idx){
+  const p = projetos.find(x=>x.id===projId);
+  if(!p||!p.materiais) return;
+  const mat = p.materiais[idx];
+  if(!mat.itemId) return showToast('Este item não está vinculado ao estoque.','err');
+  const prod = produtos.find(x=>x.id==mat.itemId);
+  if(!prod) return showToast('Item não encontrado no estoque.','err');
+  if(Number(prod.quantidade) < Number(mat.qty)) return showToast(`Estoque insuficiente! Saldo: ${prod.quantidade} ${prod.unidade}`,'err');
+  if(!confirm(`Debitar ${mat.qty} ${mat.unidade} de "${mat.nome}" do estoque?`)) return;
+  try{
+    const nova = Number(prod.quantidade) - Number(mat.qty);
+    await api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:nova,unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',foto:prod.foto||''});
+    await api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,tipo:'saida',quantidade:mat.qty,motivo:'Projeto de cliente',responsavel:usuarioAtual?.nome||'—',projeto:p.nome,obs:'Débito automático via OS'});
+    mat.debitado = true;
+    syncProjetoSheets(p);
+    renderMateriais(p);
+    await carregarDados();
+    showToast('✅ Debitado do estoque com sucesso!');
+    registrarLog('movimentacao',`Débito OS: ${mat.nome} (${mat.qty} ${mat.unidade}) → ${p.nome}`,'📤');
+  }catch(e){ showToast('Erro ao debitar.','err'); }
+}
+
+function syncProjetoSheets(p){
+  try{ api({action:'editProjeto',id:p.id,nome:p.nome,cliente:p.cliente,responsavel:p.responsavel||'',dataInicio:p.dataInicio||'',dataEntrega:p.dataEntrega||'',responsavelSep:p.responsavelSep||'',status:p.status||'ativo',obs:p.obs||'',orcamentoPrevisto:p.orcamentoPrevisto||'',materiais:JSON.stringify(p.materiais||[])}); }catch(e){}
+}
+
+function cancelarAddMaterial(){
+  document.getElementById('add-material-form').style.display = 'none';
+  document.getElementById('mat-nome') && (document.getElementById('mat-nome').value = '');
+  document.getElementById('mat-qty') && (document.getElementById('mat-qty').value = '');
+  document.getElementById('mat-obs') && (document.getElementById('mat-obs').value = '');
+  document.getElementById('mat-un') && (document.getElementById('mat-un').value = 'un');
+  document.getElementById('mat-est-search') && (document.getElementById('mat-est-search').value = '');
+  document.getElementById('mat-qty-est') && (document.getElementById('mat-qty-est').value = '');
+  document.getElementById('mat-obs-est') && (document.getElementById('mat-obs-est').value = '');
+  document.getElementById('mat-est-selected') && (document.getElementById('mat-est-selected').style.display = 'none');
+  matEstSelecionado = null;
+}
+
+function abrirAddMaterial(){
+  document.getElementById('add-material-form').style.display = 'block';
+  setMatTab('estoque');
+  document.getElementById('mat-est-search').focus();
+}
+// ===================== FIM MATERIAL ESTOQUE =====================
 
 // ===================== FIM FASE 2B =====================
 
