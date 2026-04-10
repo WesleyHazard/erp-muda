@@ -778,7 +778,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     </select>
     <select class="sel" id="est-ord" onchange="renderEstoque()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="qty-asc">Qtd ↑</option><option value="qty-desc">Qtd ↓</option></select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick="toggleColMenu('col-est')">⚙️ Colunas</button>
+      <button class="btn-gray" onclick=\"toggleColMenu('col-est',event)\">⚙️ Colunas</button>
       <div class="col-menu" id="col-est">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="col-foto" checked onchange="renderEstoque()"> 📷 Foto</label>
@@ -901,7 +901,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <select class="sel" id="hist-ord" onchange="renderHistorico()" title="Ordenar"><option value="rec">Mais recente</option><option value="ant">Mais antigo</option><option value="az">A→Z</option></select>
     <select class="sel" id="hist-proj-f" onchange="renderHistorico()"><option value="">Todos projetos</option></select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick="toggleColMenu('col-hist')">⚙️ Colunas</button>
+      <button class="btn-gray" onclick=\"toggleColMenu('col-hist',event)\">⚙️ Colunas</button>
       <div class="col-menu" id="col-hist">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="hcol-data" checked onchange="renderHistorico()"> 📅 Data/Hora</label>
@@ -930,7 +930,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <option value="ferramentas">🛠️ Ferramentas</option>
     </select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick="toggleColMenu('col-rep')">⚙️ Colunas</button>
+      <button class="btn-gray" onclick=\"toggleColMenu('col-rep',event)\">⚙️ Colunas</button>
       <div class="col-menu" id="col-rep">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="rcol-forn" checked onchange="renderReposicao()"> 🏭 Fornecedor</label>
@@ -951,7 +951,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <select class="sel" id="proj-sf" onchange="renderProjetos()"><option value="">Todos</option><option value="ativo">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select>
     <select class="sel" id="proj-ord" onchange="renderProjetos()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="entrega">Entrega ↑</option></select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick="toggleColMenu('col-proj')">⚙️ Colunas</button>
+      <button class="btn-gray" onclick=\"toggleColMenu('col-proj',event)\">⚙️ Colunas</button>
       <div class="col-menu" id="col-proj">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="pcol-resp" checked onchange="renderProjetos()"> 🧑 Responsável</label>
@@ -978,7 +978,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <option value="ferramentas">🛠️ Ferramentas</option>
     </select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick="toggleColMenu('col-forn')">⚙️ Colunas</button>
+      <button class="btn-gray" onclick=\"toggleColMenu('col-forn',event)\">⚙️ Colunas</button>
       <div class="col-menu" id="col-forn">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="fcol-tel" checked onchange="renderFornecedores()"> 📞 Telefone</label>
@@ -1259,31 +1259,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 
 <script>
-// Auto-login with saved session or show QR hint
-(async function(){
-  const p = new URLSearchParams(window.location.search);
-  if(p.get('item')){
-    const msg = document.getElementById('qr-login-msg');
-    if(msg) msg.style.display='block';
-  }
-  // Try to restore session
-  const u = carregarSessao();
-  if(u){
-    const usuarios = getUsuarios();
-    const userAtual = usuarios.find(x => x.email === u.email && x.ativo !== 'nao');
-    if(userAtual){
-      // Show loading on login screen
-      const btn = document.querySelector('.login-btn');
-      if(btn){ btn.textContent = 'Carregando...'; btn.disabled = true; }
-      salvarSessao(userAtual); // Renew session
-      await entrarNoSistema(userAtual);
-      return;
-    }
-  }
-  // No session - show login normally
-  const btn = document.querySelector('.login-btn');
-  if(btn){ btn.textContent = 'Entrar no Sistema'; btn.disabled = false; }
-})();
 
 const API='https://script.google.com/a/macros/mudavertical.com.br/s/AKfycbyVxrM2H7KaT74fJV34OqNBfYs6zulvGrF2nyLPwGlhFLzb2b9SLM4uLKpj8upKKj_S-Q/exec';
 const USUARIOS=[
@@ -1451,7 +1426,8 @@ function switchTab(tab,el){
   document.querySelectorAll('.col-menu').forEach(m=>m.classList.remove('open'));
   document.getElementById('notif-panel').classList.remove('open');
 }
-function toggleColMenu(id){
+function toggleColMenu(id, event){
+  if(event) event.stopPropagation();
   const m=document.getElementById(id);
   document.querySelectorAll('.col-menu').forEach(x=>{if(x.id!==id)x.classList.remove('open');});
   m.classList.toggle('open');
@@ -1503,13 +1479,15 @@ function salvarManutencoes(){
 
 function renderModuloManutencao(){
   carregarManutencoes();
-  // Add toolbar if not exists
-  const sec = document.getElementById('sec-mod-manutencao');
-  if(sec && !sec.querySelector('.man-toolbar')){
-    const toolbar = document.createElement('div');
-    toolbar.className = 'toolbar man-toolbar';
-    toolbar.style.marginBottom = '12px';
-    toolbar.innerHTML = `
+  const statusLabel = {funcionando:'✅ Funcionando', manutencao:'🔧 Em Manutenção', aguardando:'⏳ Aguardando Peça', quebrado:'❌ Quebrado'};
+  const statusCls = {funcionando:'ms-funcionando', manutencao:'ms-manutencao', aguardando:'ms-aguardando', quebrado:'ms-quebrado'};
+  const tipoIcon = {equipamento:'🔌', ferramenta:'🔧', veiculo:'🚗', estrutura:'🏗️', outro:'📦'};
+  
+  const totalFuncionando = manutencoes.filter(m=>m.status==='funcionando').length;
+  const totalProblema = manutencoes.filter(m=>m.status!=='funcionando').length;
+  
+  return `<div>
+    <div class="toolbar" style="margin-bottom:12px">
       <div class="sw"><span class="sw-icon">🔍</span><input id="man-search" placeholder="Buscar equipamento..." oninput="filtrarManutencao()"></div>
       <select class="sel" id="man-status-filter" onchange="filtrarManutencao()">
         <option value="">Todos status</option>
@@ -1522,17 +1500,8 @@ function renderModuloManutencao(){
         <option value="az">A→Z</option>
         <option value="za">Z→A</option>
         <option value="data">Mais recente</option>
-      </select>`;
-    sec.insertBefore(toolbar, sec.firstChild);
-  }
-  const statusLabel = {funcionando:'✅ Funcionando', manutencao:'🔧 Em Manutenção', aguardando:'⏳ Aguardando Peça', quebrado:'❌ Quebrado'};
-  const statusCls = {funcionando:'ms-funcionando', manutencao:'ms-manutencao', aguardando:'ms-aguardando', quebrado:'ms-quebrado'};
-  const tipoIcon = {equipamento:'🔌', ferramenta:'🔧', veiculo:'🚗', estrutura:'🏗️', outro:'📦'};
-  
-  const totalFuncionando = manutencoes.filter(m=>m.status==='funcionando').length;
-  const totalProblema = manutencoes.filter(m=>m.status!=='funcionando').length;
-  
-  return `<div>
+      </select>
+    </div>
     <div class="stats" style="margin-bottom:14px">
       <div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">${manutencoes.length}</div><div class="stat-sub">equipamentos</div></div></div>
       <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Funcionando</div><div class="stat-value" style="color:#16a34a">${totalFuncionando}</div></div></div>
@@ -1542,6 +1511,7 @@ function renderModuloManutencao(){
       <div style="font-weight:700;font-size:14px;color:#14532d">🔧 Equipamentos e Ferramentas</div>
       <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>
     </div>
+    <div id="lista-manutencao">
     ${manutencoes.length ? manutencoes.map((m,i)=>{
       const hoje = new Date();
       const proxima = m.proxima ? new Date(m.proxima+'T00:00:00') : null;
@@ -1564,6 +1534,7 @@ function renderModuloManutencao(){
         </div>
       </div>`;
     }).join('') : '<div class="empty">Nenhum equipamento cadastrado. Clique em "+ Novo Registro".</div>'}
+    </div>
   </div>`;
 }
 
@@ -3713,11 +3684,65 @@ function filtrarManutencao(){
   else if(ord==='za') fil.sort((a,b)=>(b.equipamento||'').localeCompare(a.equipamento||'','pt-BR'));
   // Re-render with filtered list
   const container = document.getElementById('lista-manutencao');
+  if(!container){ atualizarTabsModulos(); return; }
+  renderListaManutencao(fil, container);
+}
+
+function renderListaManutencao(fil, container){
+  if(!container) container = document.getElementById('lista-manutencao');
   if(!container) return;
-  renderListaManutencao(fil);
+  const statusLabel = {funcionando:'✅ Funcionando', manutencao:'🔧 Em Manutenção', aguardando:'⏳ Aguardando Peça', quebrado:'❌ Quebrado'};
+  const statusCls = {funcionando:'ms-funcionando', manutencao:'ms-manutencao', aguardando:'ms-aguardando', quebrado:'ms-quebrado'};
+  const tipoIcon = {equipamento:'🔌', ferramenta:'🔧', veiculo:'🚗', estrutura:'🏗️', outro:'📦'};
+  const hoje = new Date();
+  container.innerHTML = fil.length ? fil.map((m,i)=>{
+    const proxima = m.proxima ? new Date(m.proxima+'T00:00:00') : null;
+    const vencida = proxima && proxima < hoje && m.status === 'funcionando';
+    return `<div class="man-card" onclick="abrirModalManutencao(${manutencoes.indexOf(m)})">
+      <div class="man-tipo-icon">${tipoIcon[m.tipo]||'📦'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px">${m.equipamento}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">
+          ${m.responsavel?`<span>👤 ${m.responsavel}</span>`:''}
+          ${m.ultima?`<span>📅 Última: ${new Date(m.ultima+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}
+          ${m.proxima?`<span style="color:${vencida?'#dc2626':'#6b7280'}">⏭️ Próxima: ${new Date(m.proxima+'T00:00:00').toLocaleDateString('pt-BR')}${vencida?' ⚠️':''}</span>`:''}
+          ${m.custo?`<span>💰 R$ ${Number(m.custo).toFixed(2)}</span>`:''}
+        </div>
+        ${m.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">📝 ${m.obs}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="man-status ${statusCls[m.status]||''}">${statusLabel[m.status]||m.status}</span>
+        ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();removerManutencao(${manutencoes.indexOf(m)})">🗑️</button>`:''}
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">Nenhum equipamento encontrado.</div>';
 }
 
 // ===================== FIM FASE 2B =====================
+
+// ===================== AUTO-LOGIN =====================
+document.addEventListener('DOMContentLoaded', async function(){
+  const p = new URLSearchParams(window.location.search);
+  if(p.get('item')){
+    const msg = document.getElementById('qr-login-msg');
+    if(msg) msg.style.display='block';
+  }
+  const u = carregarSessao();
+  if(u){
+    const usuarios = getUsuarios();
+    const userAtual = usuarios.find(x => x.email === u.email && x.ativo !== 'nao');
+    if(userAtual){
+      const btn = document.querySelector('.login-btn');
+      if(btn){ btn.textContent = 'Carregando...'; btn.disabled = true; }
+      salvarSessao(userAtual);
+      await entrarNoSistema(userAtual);
+      return;
+    }
+  }
+  const btn = document.querySelector('.login-btn');
+  if(btn){ btn.textContent = 'Entrar no Sistema'; btn.disabled = false; }
+});
+// ===================== FIM AUTO-LOGIN =====================
 
 </script>
 </body>
