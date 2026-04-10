@@ -2,8 +2,16 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ERP — Muda Paisagismo</title>
+<meta name="description" content="Sistema ERP — Muda Paisagismo">
+<meta name="theme-color" content="#16a34a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Muda ERP">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="https://mudapaisagismo.com.br/wp-content/uploads/2025/05/logo_muda-paisagismo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
@@ -290,6 +298,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
   <div class="login-logo"><img src="https://mudapaisagismo.com.br/wp-content/uploads/2025/05/logo_muda-paisagismo.png" alt="Muda"></div>
   <div class="login-title">Controle de Estoque</div>
   <div class="login-sub">Sistema ERP — Muda Paisagismo</div>
+  <div id="qr-login-msg" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#14532d;text-align:center">
+    📦 Item escaneado! Faça login para acessá-lo diretamente.
+  </div>
   <div class="login-error" id="login-error">E-mail ou senha incorretos.</div>
   <div class="lg"><label>E-mail</label><input type="email" id="login-email" placeholder="seu@email.com"></div>
   <div class="lg"><label>Senha</label><input type="password" id="login-senha" placeholder="••••••••" onkeydown="if(event.key==='Enter')fazerLogin()"></div>
@@ -718,11 +729,25 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <div class="card"><div class="card-title">😴 Itens Parados (+30 dias)</div><div id="lista-parados"></div></div>
   </div>
   <div id="dash-qr" style="display:none;margin-top:14px">
-    <div class="card">
-      <div class="card-title">🏷️ Gestão de Etiquetas QR Code</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn-green" onclick="gerarTodasEtiquetas()">🖨️ Imprimir Todas</button>
-        <button class="btn-gray" onclick="switchTab('estoque',document.querySelectorAll('.tab')[1])">📦 Gerar por Item</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-title">🌐 QR Code do Sistema</div>
+        <p style="font-size:12px;color:#6b7280;margin-bottom:12px">Escaneie para abrir o ERP em qualquer dispositivo</p>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div id="qr-sistema-canvas" style="padding:10px;background:#fff;border:2px solid #e5e7eb;border-radius:10px;display:inline-block"></div>
+          <div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:8px">📱 Aponte a câmera do celular para o QR Code</div>
+            <button class="btn-green" onclick="imprimirQRSistema()">🖨️ Imprimir</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏷️ Etiquetas dos Itens</div>
+        <p style="font-size:12px;color:#6b7280;margin-bottom:12px">Cada item tem seu próprio QR Code único</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-green" onclick="gerarTodasEtiquetas()">🖨️ Imprimir Todas</button>
+          <button class="btn-gray" onclick="switchTab('estoque',document.querySelectorAll('.tab')[1])">📦 Por Item</button>
+        </div>
       </div>
     </div>
   </div>
@@ -746,6 +771,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <option value="baixo">⚠️ Estoque Baixo</option>
       <option value="ok">✅ Estoque OK</option>
     </select>
+    <select class="sel" id="est-ord" onchange="renderEstoque()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="qty-asc">Qtd ↑</option><option value="qty-desc">Qtd ↓</option></select>
     <div class="col-toggle">
       <button class="btn-gray" onclick="toggleColMenu('col-est')">⚙️ Colunas</button>
       <div class="col-menu" id="col-est">
@@ -854,6 +880,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
   <div class="toolbar">
     <div class="sw"><span class="sw-icon">🔍</span><input id="hist-search" placeholder="Buscar por item, responsável ou projeto..." oninput="renderHistorico()"></div>
     <select class="sel" id="hist-tipo" onchange="renderHistorico()"><option value="">Todos</option><option value="entrada">▲ Entradas</option><option value="saida">▼ Saídas</option></select>
+    <select class="sel" id="hist-ord" onchange="renderHistorico()" title="Ordenar"><option value="rec">Mais recente</option><option value="ant">Mais antigo</option><option value="az">A→Z</option></select>
     <select class="sel" id="hist-proj-f" onchange="renderHistorico()"><option value="">Todos projetos</option></select>
     <div class="col-toggle">
       <button class="btn-gray" onclick="toggleColMenu('col-hist')">⚙️ Colunas</button>
@@ -893,6 +920,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <label class="col-item"><input type="checkbox" id="rcol-falta" checked onchange="renderReposicao()"> 📊 Qtd. Faltando</label>
       </div>
     </div>
+    <select class="sel" id="rep-ord" onchange="renderReposicao()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="falta">Maior falta</option></select>
     <button class="btn-green" onclick="exportarReposicao()">📋 Copiar Lista</button>
   </div>
   <div id="lista-reposicao"></div>
@@ -903,6 +931,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
   <div class="toolbar">
     <div class="sw"><span class="sw-icon">🔍</span><input id="proj-search" placeholder="Buscar projeto..." oninput="renderProjetos()"></div>
     <select class="sel" id="proj-sf" onchange="renderProjetos()"><option value="">Todos</option><option value="ativo">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select>
+    <select class="sel" id="proj-ord" onchange="renderProjetos()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="entrega">Entrega ↑</option></select>
     <div class="col-toggle">
       <button class="btn-gray" onclick="toggleColMenu('col-proj')">⚙️ Colunas</button>
       <div class="col-menu" id="col-proj">
@@ -940,6 +969,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <label class="col-item"><input type="checkbox" id="fcol-obs" checked onchange="renderFornecedores()"> 📝 Observações</label>
       </div>
     </div>
+    <select class="sel" id="forn-ord" onchange="renderFornecedores()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option></select>
     <button class="btn-green" id="btn-novo-forn" onclick="abrirModalForn()">+ Novo Fornecedor</button>
   </div>
   <div id="lista-fornecedores"><div class="empty">Nenhum fornecedor cadastrado.</div></div>
@@ -1211,6 +1241,26 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 
 <script>
+// Auto-login with saved session or show QR hint
+(async function(){
+  const p = new URLSearchParams(window.location.search);
+  if(p.get('item')){
+    const msg = document.getElementById('qr-login-msg');
+    if(msg) msg.style.display='block';
+  }
+  // Try to restore session
+  const u = carregarSessao();
+  if(u){
+    const usuarios = getUsuarios();
+    const userAtual = usuarios.find(x => x.email === u.email && x.ativo !== 'nao');
+    if(userAtual){
+      salvarSessao(userAtual); // Renew session
+      await entrarNoSistema(userAtual);
+      return;
+    }
+  }
+})();
+
 const API='https://script.google.com/a/macros/mudavertical.com.br/s/AKfycbyVxrM2H7KaT74fJV34OqNBfYs6zulvGrF2nyLPwGlhFLzb2b9SLM4uLKpj8upKKj_S-Q/exec';
 const USUARIOS=[
   {id:'1',email:'wesley@mudavertical.com.br',senha:'Tdr4surf@',nome:'Wesley',nivel:'admin'},
@@ -1242,6 +1292,73 @@ function lso(k){try{return JSON.parse(localStorage.getItem(k)||'{}')}catch{retur
 function getUsuarios(){try{const u=JSON.parse(localStorage.getItem('muda_usuarios')||'null');return u||USUARIOS}catch{return USUARIOS}}
 function saveUsuarios(u){sl('muda_usuarios',u)}
 
+// ===================== SESSÃO PERSISTENTE =====================
+const SESSION_KEY = 'muda_session';
+const SESSION_HOURS = 24;
+
+function salvarSessao(usuario){
+  const sessao = {
+    usuario,
+    expira: Date.now() + (SESSION_HOURS * 60 * 60 * 1000)
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(sessao));
+}
+
+function carregarSessao(){
+  try{
+    const raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const sessao = JSON.parse(raw);
+    if(Date.now() > sessao.expira){
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return sessao.usuario;
+  }catch(e){ return null; }
+}
+
+function limparSessao(){
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function iniciarComSessao(){
+  const u = carregarSessao();
+  if(!u) return false;
+  // Verify user still exists and is active
+  const usuarios = getUsuarios();
+  const userAtual = usuarios.find(x => x.email === u.email && x.ativo !== 'nao');
+  if(!userAtual) return false;
+  // Auto login
+  entrarNoSistema(userAtual);
+  return true;
+}
+
+// ===================== FIM SESSÃO =====================
+async function entrarNoSistema(u){
+  usuarioAtual = u;
+  const nv = NIVEIS[u.nivel];
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('tela-sistema').style.display = 'block';
+  document.getElementById('user-nome-badge').textContent = u.nome;
+  const nb = document.getElementById('nivel-badge');
+  nb.textContent = nv.label; nb.className = 'nivel-pill ' + nv.cls;
+  document.getElementById('header-avatar-inicial').textContent = u.nome[0];
+  const perfil = lso('perfil_' + u.email);
+  if(perfil.foto) document.getElementById('header-avatar').innerHTML = `<img src="${perfil.foto}">`;
+  aplicarPermissoes();
+  carregarLog();
+  carregarCategorias();
+  carregarModulos();
+  carregarUnidades();
+  aplicarAparencia();
+  registrarLog('login', 'Login realizado', '🔐');
+  const params = new URLSearchParams(window.location.search);
+  const qrItem = params.get('item');
+  await carregarDados();
+  if(qrItem) setTimeout(()=>abrirItemPorQR(qrItem), 500);
+}
+
+
 async function fazerLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const senha=document.getElementById('login-senha').value;
@@ -1250,6 +1367,7 @@ async function fazerLogin(){
   const u=usuarios.find(x=>x.email.toLowerCase()===email&&x.senha===senha&&x.ativo!=='nao');
   if(!u){document.getElementById('login-error').style.display='block';return;}
   usuarioAtual=u;
+  salvarSessao(u);
   document.getElementById('tela-login').style.display='none';
   document.getElementById('tela-sistema').style.display='block';
   const nv=NIVEIS[u.nivel];
@@ -1274,6 +1392,7 @@ async function fazerLogin(){
 
 function fazerLogout(){
   usuarioAtual=null;
+  limparSessao();
   document.getElementById('tela-sistema').style.display='none';
   document.getElementById('tela-login').style.display='block';
   document.getElementById('login-email').value='';
@@ -1437,7 +1556,8 @@ function salvarManutencao(){
   atualizarTabsModulos();
   // If currently on manutencao tab, re-click it
   const manTab = Array.from(document.querySelectorAll('.tab-modulo')).find(t=>t.textContent.includes('Manutenção'));
-  if(manTab && document.getElementById('sec-mod-manutencao')?.classList.contains('active')) manTab.click();
+  const manSec = document.getElementById('sec-mod-manutencao')||{classList:{contains:()=>false}};
+  if(manTab && manSec && manSec.classList.contains('active')) manTab.click();
   showToast(editManId !== null ? 'Registro atualizado!' : 'Registro salvo!');
   registrarLog('edicao', `Manutenção ${editManId!==null?'atualizada':'registrada'}: ${equip}`, '🔧');
 }
@@ -1566,7 +1686,15 @@ function renderEstoque(){
   const q=document.getElementById('est-search').value.toLowerCase();
   const cat=document.getElementById('est-cat').value;
   const st=document.getElementById('est-status').value;
+  const ord=document.getElementById('est-ord')?.value||'az';
   const fil=produtos.filter(p=>{const low=p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo);return(!cat||p.categoria===cat)&&(!st||(st==='baixo'?low:!low))&&(p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)||(p.fornecedor||'').toLowerCase().includes(q)||(p.localizacao||'').toLowerCase().includes(q));});
+  fil.sort((a,b)=>{
+    if(ord==='az') return a.nome.localeCompare(b.nome,'pt-BR');
+    if(ord==='za') return b.nome.localeCompare(a.nome,'pt-BR');
+    if(ord==='qty-asc') return Number(a.quantidade)-Number(b.quantidade);
+    if(ord==='qty-desc') return Number(b.quantidade)-Number(a.quantidade);
+    return 0;
+  });
   document.getElementById('est-count').textContent=fil.length+' '+(fil.length===1?'item':'itens')+' encontrados';
   const el=document.getElementById('lista-estoque');
   if(!fil.length){el.innerHTML=`<div class="empty">${!produtos.length?'Clique em "+ Novo Item" para começar!':'Nenhum item encontrado.'}</div>`;return;}
@@ -1602,12 +1730,28 @@ async function salvarItem(){
   try{if(editItemId){await api({action:'editProduto',id:editItemId,...p});showToast('Item atualizado!');}else{await api({action:'addProduto',...p});showToast('Item cadastrado!');}cancelarForm();await carregarDados();}catch(e){showToast('Erro ao salvar.','err');}
 }
 function editarItem(id){if(!pode('editar'))return;const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;editItemId=id;fotoBase64=p.foto||null;document.getElementById('fi-nome').value=p.nome;document.getElementById('fi-sku').value=p.sku||'';document.getElementById('fi-loc').value=p.localizacao||'';document.getElementById('fi-cat').value=p.categoria;document.getElementById('fi-un').value=p.unidade;document.getElementById('fi-qty').value=p.quantidade;document.getElementById('fi-min').value=p.estoqueMinimo||'';document.getElementById('fi-max').value=p.estoqueMaximo||'';document.getElementById('fi-forn').value=p.fornecedor||'';document.getElementById('fi-custo').value=p.custo||'';document.getElementById('fi-desc').value=p.descricao||'';document.getElementById('fi-obs').value=p.observacoes||'';if(p.foto){document.getElementById('fi-foto-preview').src=p.foto;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';}document.getElementById('form-item-title').textContent='✏️ Editar Item';document.querySelector('#form-item .btn-green').textContent='Salvar Alterações';document.getElementById('form-item').style.display='block';window.scrollTo(0,0);}
-async function deletarItem(id){if(!pode('deletar'))return;if(!confirm('Remover este item?'))return;try{const pDel=produtos.find(x=>String(x.id)===String(id));await api({action:'deleteProduto',id});showToast('Removido.');registrarLog('exclusao',`Item excluído: ${pDel?.nome||id}`,'🗑️');await carregarDados();}catch(e){showToast('Erro.','err');}}
+async function deletarItem(id){
+  if(!pode('deletar'))return;
+  if(!confirm('Remover este item?'))return;
+  const pDel=produtos.find(x=>String(x.id)===String(id));
+  produtos=produtos.filter(x=>String(x.id)!==String(id));
+  renderEstoque();
+  showToast('Removido.');
+  registrarLog('exclusao',`Item excluído: ${pDel?.nome||id}`,'🗑️');
+  try{await api({action:'deleteProduto',id});}catch(e){showToast('Erro ao sincronizar.','err');}
+}
 
 function abrirQR(id){if(!pode('qr'))return showToast('Apenas administradores.','err');const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;qrItemAtual=p;const cod=getCodigo(p);const url=window.location.origin+window.location.pathname+'?item='+cod;document.getElementById('qr-canvas').innerHTML='';new QRCode(document.getElementById('qr-canvas'),{text:url,width:160,height:160,colorDark:'#14532d',colorLight:'#ffffff'});document.getElementById('qr-nome').textContent=p.nome;document.getElementById('qr-codes').innerHTML=`<span class="ic-code">🏷️ ${cod}</span>${p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}`;document.getElementById('qr-loc').textContent=p.localizacao?'📍 '+p.localizacao:'';document.getElementById('modal-qr').classList.add('open');}
 function imprimirEtiqueta(){if(!qrItemAtual)return;const p=qrItemAtual;const cod=getCodigo(p);const url=window.location.origin+window.location.pathname+'?item='+cod;const win=window.open('','_blank','width=400,height=300');win.document.write(`<html><head><title>Etiqueta</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body style="font-family:Arial;text-align:center;padding:20px"><div id="qr"></div><div style="font-weight:700;font-size:14px;margin-top:8px">${p.nome}</div><div style="color:#16a34a;font-weight:700;font-size:12px">${cod}</div>${p.sku?`<div style="color:#7c3aed;font-size:11px">SKU: ${p.sku}</div>`:''}${p.localizacao?`<div style="color:#6b7280;font-size:11px">📍 ${p.localizacao}</div>`:''}<script>new QRCode(document.getElementById('qr'),{text:'${url}',width:120,height:120,colorDark:'#14532d'});setTimeout(()=>window.print(),500);<\/script></body></html>`);win.document.close();}
 function gerarTodasEtiquetas(){if(!produtos.length)return showToast('Nenhum item.','err');const win=window.open('','_blank');const itens=produtos.map(p=>({p,cod:getCodigo(p),url:window.location.origin+window.location.pathname+'?item='+getCodigo(p)}));win.document.write(`<html><head><title>Etiquetas</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial}.etiq{display:inline-flex;flex-direction:column;align-items:center;border:1px solid #333;border-radius:6px;padding:8px;margin:4px;width:140px;break-inside:avoid;vertical-align:top}.nome{font-size:9px;font-weight:700;text-align:center;margin-top:5px}.cod{font-size:8px;color:#16a34a;font-weight:700}@media print{button{display:none}}</style></head><body><button onclick="window.print()" style="margin:10px;padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimir Todas</button><div>${itens.map((x,i)=>`<div class="etiq"><div id="qr${i}"></div><div class="nome">${x.p.nome}</div><div class="cod">${x.cod}</div></div>`).join('')}</div><script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script></body></html>`);win.document.close();}
-function abrirItemPorQR(cod){const p=produtos.find((x,i)=>getCodigo(x)===cod);if(!p)return;switchTab('movimentacao',document.querySelectorAll('.tab')[2]);selecionarItemMov(p.id);}
+function abrirItemPorQR(cod){
+  const p=produtos.find((x,i)=>getCodigo(x)===cod);
+  if(!p){ showToast('Item não encontrado: '+cod,'err'); return; }
+  // Go directly to movimentacao with item selected
+  switchTab('movimentacao',document.querySelectorAll('.tab')[2]);
+  selecionarItemMov(p.id);
+  showToast('📦 '+p.nome+' — Saldo: '+p.quantidade+' '+p.unidade);
+}
 
 function filtrarItens(){const q=document.getElementById('mov-search').value.toLowerCase();const dd=document.getElementById('mov-drop');if(!q){dd.classList.remove('open');return;}const res=produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);dd.innerHTML=res.length?res.map(p=>`<div class="idd-opt" onclick="selecionarItemMov('${p.id}')"><div>${p.nome}</div><div style="display:flex;gap:6px;margin-top:1px"><span style="font-size:10px;color:#16a34a;font-weight:700">${getCodigo(p)}</span>${p.sku?`<span style="font-size:10px;color:#7c3aed">SKU:${p.sku}</span>`:''}<span style="font-size:10px;color:#6b7280">Saldo: ${p.quantidade} ${p.unidade}</span></div></div>`).join(''):'<div class="idd-opt" style="color:#9ca3af">Nenhum item encontrado</div>';dd.classList.add('open');}
 function selecionarItemMov(id){movItemTab=id;const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;document.getElementById('mov-search').value=p.nome;document.getElementById('mov-drop').classList.remove('open');const sc=document.getElementById('mov-selected');sc.style.display='block';document.getElementById('isc-nome').textContent=p.nome;const low=p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo);document.getElementById('isc-info').innerHTML=`<span style="color:${low?'#dc2626':'#16a34a'};font-weight:700">${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}</span><span style="color:#6b7280">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}</span><span class="ic-code">${getCodigo(p)}</span>${p.localizacao?`<span style="color:#7c3aed;font-size:10px">📍 ${p.localizacao}</span>`:''}`;}
@@ -1624,14 +1768,40 @@ async function salvarMovTab(){
 }
 function abrirMovRapida(id,tipo){if(!pode('editar'))return showToast('Sem permissão.','err');movItemModal=id;const p=produtos.find(x=>String(x.id)===String(id));document.getElementById('mm-title').textContent=tipo==='entrada'?'▲ Registrar Entrada':'▼ Registrar Saída';document.getElementById('mm-sub').textContent=p?`${p.nome} — saldo: ${p.quantidade} ${p.unidade}`:'';['mm-qty','mm-resp','mm-obs'].forEach(i=>document.getElementById(i).value='');setTipo(tipo);popularMovSels();document.getElementById('modal-mov').classList.add('open');}
 function setTipo(t){movTipoModal=t;document.getElementById('mm-btn-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mm-btn-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mm-motivo');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?motivosEntrada:motivosSaida).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
-async function confirmarMovModal(){const qty=Number(document.getElementById('mm-qty').value);const resp=document.getElementById('mm-resp').value.trim();if(!qty||qty<=0)return showToast('Quantidade inválida.','err');if(!resp)return showToast('Informe o responsável.','err');const p=produtos.find(x=>String(x.id)===String(movItemModal));if(!p)return;if(movTipoModal==='saida'&&Number(p.quantidade)-qty<0)return showToast('Estoque insuficiente!','err');try{const nova=movTipoModal==='entrada'?Number(p.quantidade)+qty:Number(p.quantidade)-qty;await api({action:'addMovimentacao',itemId:movItemModal,itemNome:p.nome,tipo:movTipoModal,quantidade:qty,motivo:document.getElementById('mm-motivo').value,responsavel:resp,projeto:document.getElementById('mm-projeto').value||'—',obs:document.getElementById('mm-obs').value});await api({action:'editProduto',id:movItemModal,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',foto:p.foto||''});showToast(movTipoModal==='entrada'?'Entrada registrada!':'Saída registrada!');fecharModal('modal-mov');await carregarDados();}catch(e){showToast('Erro.','err');}}
+async function confirmarMovModal(){
+  const qty=Number(document.getElementById('mm-qty').value);
+  const resp=document.getElementById('mm-resp').value.trim();
+  if(!qty||qty<=0)return showToast('Quantidade inválida.','err');
+  if(!resp)return showToast('Informe o responsável.','err');
+  const p=produtos.find(x=>String(x.id)===String(movItemModal));
+  if(!p)return;
+  if(movTipoModal==='saida'&&Number(p.quantidade)-qty<0)return showToast('Estoque insuficiente!','err');
+  const nova=movTipoModal==='entrada'?Number(p.quantidade)+qty:Number(p.quantidade)-qty;
+  // Update locally first for instant feedback
+  p.quantidade=nova;
+  fecharModal('modal-mov');
+  showToast(movTipoModal==='entrada'?'Entrada registrada!':'Saída registrada!');
+  renderMovBaixo();
+  // Sync to Sheets in background
+  try{
+    await api({action:'addMovimentacao',itemId:movItemModal,itemNome:p.nome,tipo:movTipoModal,quantidade:qty,motivo:document.getElementById('mm-motivo').value,responsavel:resp,projeto:document.getElementById('mm-projeto').value||'—',obs:document.getElementById('mm-obs').value});
+    await api({action:'editProduto',id:movItemModal,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',foto:p.foto||''});
+    await carregarDados();
+  }catch(e){showToast('Erro ao sincronizar.','err');}
+}
 function renderMovHistResumo(){const el=document.getElementById('mov-hist');el.innerHTML=historico.length?historico.slice(0,5).map(h=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px"><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span><span style="flex:1">${h.itemNome}</span><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span></div>`).join(''):'<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';}
 function renderMovBaixo(){const el=document.getElementById('mov-baixo');const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));el.innerHTML=baixo.length?baixo.slice(0,4).map(p=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #fee2e2;font-size:12px"><span>${p.nome}</span><span style="font-weight:700;color:#dc2626">${p.quantidade} ${p.unidade}</span></div>`).join(''):'<div style="color:#16a34a;font-size:13px">✅ Todos em conformidade!</div>';}
 
 function renderHistorico(){
   const q=document.getElementById('hist-search').value.toLowerCase();const t=document.getElementById('hist-tipo').value;const pf=document.getElementById('hist-proj-f').value;
   const ps=document.getElementById('hist-proj-f');const curr=ps.value;ps.innerHTML='<option value="">Todos projetos</option>';[...new Set(historico.map(h=>h.projeto).filter(p=>p&&p!=='—'))].forEach(p=>ps.innerHTML+=`<option value="${p}">${p}</option>`);if(curr)ps.value=curr;
+  const ord=document.getElementById('hist-ord')?.value||'rec';
   const fil=historico.filter(h=>(!t||h.tipo===t)&&(!pf||h.projeto===pf)&&(h.itemNome.toLowerCase().includes(q)||(h.responsavel||'').toLowerCase().includes(q)||(h.projeto||'').toLowerCase().includes(q)));
+  fil.sort((a,b)=>{
+    if(ord==='az') return a.itemNome.localeCompare(b.itemNome,'pt-BR');
+    if(ord==='ant') return 0; // already oldest first if needed
+    return 0; // default: server order (most recent first)
+  });
   document.getElementById('hist-count').textContent=fil.length+' registro'+(fil.length!==1?'s':'');
   const showData=document.getElementById('hcol-data')?.checked!==false;const showResp=document.getElementById('hcol-resp')?.checked!==false;const showProj=document.getElementById('hcol-proj')?.checked!==false;const showMotivo=document.getElementById('hcol-motivo')?.checked!==false;const showObs=document.getElementById('hcol-obs')?.checked!==false;
   document.getElementById('lista-historico').innerHTML=fil.length?fil.map(h=>`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px"><div style="font-size:16px;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};padding-top:2px">${h.tipo==='entrada'?'▲':'▼'}</div><div style="flex:1;min-width:120px"><div style="font-weight:700;font-size:13px">${h.itemNome}</div><div style="font-size:11px;color:#9ca3af;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">${showMotivo&&h.motivo&&h.motivo!=='—'?`<span>📌 ${h.motivo}</span>`:''}${showProj&&h.projeto&&h.projeto!=='—'?`<span>🏗️ ${h.projeto}</span>`:''}${showObs&&h.obs?`<span>💬 ${h.obs}</span>`:''}</div></div><div style="text-align:right"><div style="font-weight:800;font-size:14px;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</div>${showResp?`<div style="font-size:11px;color:#9ca3af">👤 ${h.responsavel}</div>`:''}${showData?`<div style="font-size:10px;color:#9ca3af">${h.data}</div>`:''}</div></div>`).join(''):'<div class="empty">Nenhuma movimentação encontrada.</div>';
@@ -1646,7 +1816,17 @@ function renderProjetos(){
   const showResp=document.getElementById('pcol-resp')?.checked!==false;
   const showObs=document.getElementById('pcol-obs')?.checked!==false;
   const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;
+  const ord=document.getElementById('proj-ord')?.value||'az';
   const fil=projetos.filter(p=>(!sf||p.status===sf)&&(p.nome.toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));
+  fil.sort((a,b)=>{
+    if(ord==='az') return a.nome.localeCompare(b.nome,'pt-BR');
+    if(ord==='za') return b.nome.localeCompare(a.nome,'pt-BR');
+    if(ord==='entrega'){
+      if(!a.dataEntrega) return 1; if(!b.dataEntrega) return -1;
+      return new Date(toISODate(a.dataEntrega)) - new Date(toISODate(b.dataEntrega));
+    }
+    return 0;
+  });
   const sl2={ativo:'Em andamento',concluido:'Concluído',pausado:'Pausado'};
   const slc={ativo:'ps-ativo',concluido:'ps-concluido',pausado:'ps-pausado'};
   const hoje=new Date();
@@ -1783,7 +1963,16 @@ async function salvarProjeto(){
     popularMovSels();
   }catch(e){showToast('Erro ao salvar projeto.','err');}
 }
-async function deletarProj(id){if(!confirm('Remover?'))return;try{await api({action:'deleteProjeto',id});showToast('Removido.');registrarLog('exclusao','Projeto removido','🗑️');await carregarDados();}catch(e){showToast('Erro.','err');}}
+async function deletarProj(id){
+  if(!confirm('Remover?'))return;
+  // Remove locally and re-render immediately
+  projetos=projetos.filter(p=>String(p.id)!==String(id));
+  renderProjetos();
+  showToast('Removido.');
+  registrarLog('exclusao','Projeto removido','🗑️');
+  // Sync to Sheets in background
+  try{await api({action:'deleteProjeto',id});}catch(e){showToast('Erro ao sincronizar.','err');}
+}
 
 function renderFornecedores(){
   const q=document.getElementById('forn-search').value.toLowerCase();
@@ -1792,7 +1981,12 @@ function renderFornecedores(){
   const showEmail=document.getElementById('fcol-email')?.checked!==false;
   const showCat=document.getElementById('fcol-cat')?.checked!==false;
   const showObs=document.getElementById('fcol-obs')?.checked!==false;
+  const ord=document.getElementById('forn-ord')?.value||'az';
   const fil=fornecedores.filter(f=>(!cf||f.categoria===cf)&&(f.nome.toLowerCase().includes(q)||(f.tel||'').toLowerCase().includes(q)));
+  fil.sort((a,b)=>{
+    if(ord==='za') return b.nome.localeCompare(a.nome,'pt-BR');
+    return a.nome.localeCompare(b.nome,'pt-BR');
+  });
   document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`
     <div class="forn-card" style="cursor:pointer;transition:box-shadow .2s" onclick="abrirDetalhesForn('${f.id}')" onmouseover="this.style.boxShadow='0 2px 8px #16a34a22'" onmouseout="this.style.boxShadow=''">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
@@ -1864,8 +2058,30 @@ function abrirModalForn(id){
     Object.entries(CATS).map(([id,c]) => `<option value="${id}" ${f?.categoria===id?'selected':''}>${c.icon} ${c.label}</option>`).join('');
   document.getElementById('modal-forn').classList.add('open');
 }
-async function salvarFornecedor(){const nome=document.getElementById('mf-nome').value.trim();if(!nome)return showToast('Informe o nome.','err');const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};try{if(editFornId){await api({action:'editFornecedor',...f});}else{await api({action:'addFornecedor',...f});}showToast(editFornId?'Atualizado!':'Cadastrado!');registrarLog('cadastro',`Fornecedor ${editFornId?'atualizado':'cadastrado'}: ${nome}`,'🏭');fecharModal('modal-forn');await carregarDados();renderFornecedores();}catch(e){showToast('Erro ao salvar.','err');}}
-async function deletarForn(id){if(!confirm('Remover?'))return;try{await api({action:'deleteFornecedor',id});showToast('Removido.');await carregarDados();}catch(e){showToast('Erro.','err');}}
+async function salvarFornecedor(){
+  const nome=document.getElementById('mf-nome').value.trim();
+  if(!nome)return showToast('Informe o nome.','err');
+  const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};
+  // Update locally first for instant feedback
+  if(editFornId){ fornecedores=fornecedores.map(x=>String(x.id)===String(editFornId)?f:x); }
+  else { fornecedores=[...fornecedores,f]; }
+  fecharModal('modal-forn');
+  renderFornecedores();
+  showToast(editFornId?'Atualizado!':'Cadastrado!');
+  registrarLog('cadastro',`Fornecedor ${editFornId?'atualizado':'cadastrado'}: ${nome}`,'🏭');
+  // Sync to Sheets in background
+  try{
+    if(editFornId){await api({action:'editFornecedor',...f});}
+    else{await api({action:'addFornecedor',...f});}
+  }catch(e){showToast('Erro ao sincronizar.','err');}
+}
+async function deletarForn(id){
+  if(!confirm('Remover?'))return;
+  fornecedores=fornecedores.filter(f=>String(f.id)!==String(id));
+  renderFornecedores();
+  showToast('Removido.');
+  try{await api({action:'deleteFornecedor',id});}catch(e){showToast('Erro ao sincronizar.','err');}
+}
 
 function abrirPerfil(){const perfil=lso('perfil_'+usuarioAtual.email);document.getElementById('perf-nome').value=perfil.nome||usuarioAtual.nome;document.getElementById('perf-cargo').value=perfil.cargo||'';document.getElementById('perf-tel').value=perfil.tel||'';document.getElementById('perf-email').value=usuarioAtual.email;document.getElementById('perfil-avatar-inicial').textContent=usuarioAtual.nome[0];if(perfil.foto)document.getElementById('perfil-avatar-display').innerHTML=`<img src="${perfil.foto}">`;if(usuarioAtual.nivel==='admin'){document.getElementById('secao-usuarios').style.display='block';renderUsuariosPerfil();}document.getElementById('modal-perfil').classList.add('open');}
 function carregarFotoPerfil(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{const foto=ev.target.result;document.getElementById('perfil-avatar-display').innerHTML=`<img src="${foto}">`;const perfil=lso('perfil_'+usuarioAtual.email);perfil.foto=foto;localStorage.setItem('perfil_'+usuarioAtual.email,JSON.stringify(perfil));document.getElementById('header-avatar').innerHTML=`<img src="${foto}">`;showToast('Foto atualizada!');};reader.readAsDataURL(file);}
@@ -3065,6 +3281,24 @@ function renderMpLista(){
   }).join('');
 }
 // ===================== FIM MATERIAIS MODAL PROJETO =====================
+
+
+function imprimirQRSistema(){
+  const url = window.location.origin + window.location.pathname;
+  const win = window.open('','_blank','width=400,height=350');
+  win.document.write(`<!DOCTYPE html><html><head><title>QR - ERP Muda</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head>
+  <body style="font-family:Arial;text-align:center;padding:20px">
+  <div id="qr"></div>
+  <div style="font-weight:700;font-size:16px;margin-top:10px;color:#14532d">🌿 Muda Paisagismo</div>
+  <div style="font-size:12px;color:#6b7280;margin-top:4px">Sistema ERP — Controle de Estoque</div>
+  <div style="font-size:10px;color:#9ca3af;margin-top:4px">${url}</div>
+  <script>
+    new QRCode(document.getElementById('qr'),{text:'${url}',width:180,height:180,colorDark:'#14532d'});
+    setTimeout(()=>window.print(),600);
+  <\/script></body></html>`);
+  win.document.close();
+}
 
 // ===================== FIM FASE 2B =====================
 
