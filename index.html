@@ -839,6 +839,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <!-- MOVIMENTAÇÃO -->
 <div class="section" id="sec-movimentacao">
+  <div class="toolbar" style="margin-bottom:12px">
+    <div class="sw"><span class="sw-icon">🔍</span><input id="mov-search-filter" placeholder="Filtrar histórico..." oninput="renderMovHistFiltro()"></div>
+    <select class="sel" id="mov-tipo-filter" onchange="renderMovHistFiltro()">
+      <option value="">Todos</option>
+      <option value="entrada">▲ Entradas</option>
+      <option value="saida">▼ Saídas</option>
+    </select>
+    <select class="sel" id="mov-ord-filter" onchange="renderMovHistFiltro()">
+      <option value="rec">Mais recente</option>
+      <option value="az">A→Z</option>
+      <option value="za">Z→A</option>
+    </select>
+  </div>
   <div class="mov-container">
     <div class="mov-box">
       <div class="mov-title">↔️ Registrar Movimentação</div>
@@ -1485,6 +1498,28 @@ function salvarManutencoes(){
 
 function renderModuloManutencao(){
   carregarManutencoes();
+  // Add toolbar if not exists
+  const sec = document.getElementById('sec-mod-manutencao');
+  if(sec && !sec.querySelector('.man-toolbar')){
+    const toolbar = document.createElement('div');
+    toolbar.className = 'toolbar man-toolbar';
+    toolbar.style.marginBottom = '12px';
+    toolbar.innerHTML = `
+      <div class="sw"><span class="sw-icon">🔍</span><input id="man-search" placeholder="Buscar equipamento..." oninput="filtrarManutencao()"></div>
+      <select class="sel" id="man-status-filter" onchange="filtrarManutencao()">
+        <option value="">Todos status</option>
+        <option value="funcionando">✅ Funcionando</option>
+        <option value="manutencao">🔧 Em Manutenção</option>
+        <option value="aguardando">⏳ Aguardando Peça</option>
+        <option value="quebrado">❌ Quebrado</option>
+      </select>
+      <select class="sel" id="man-ord" onchange="filtrarManutencao()">
+        <option value="az">A→Z</option>
+        <option value="za">Z→A</option>
+        <option value="data">Mais recente</option>
+      </select>`;
+    sec.insertBefore(toolbar, sec.firstChild);
+  }
   const statusLabel = {funcionando:'✅ Funcionando', manutencao:'🔧 Em Manutenção', aguardando:'⏳ Aguardando Peça', quebrado:'❌ Quebrado'};
   const statusCls = {funcionando:'ms-funcionando', manutencao:'ms-manutencao', aguardando:'ms-aguardando', quebrado:'ms-quebrado'};
   const tipoIcon = {equipamento:'🔌', ferramenta:'🔧', veiculo:'🚗', estrutura:'🏗️', outro:'📦'};
@@ -3639,6 +3674,43 @@ function imprimirQRSistema(){
   <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:180,height:180,colorDark:'#14532d'});
   setTimeout(()=>window.print(),600);<\/script></body></html>`);
   win.document.close();
+}
+
+
+function renderMovHistFiltro(){
+  const q = (document.getElementById('mov-search-filter')?.value||'').toLowerCase();
+  const tipo = document.getElementById('mov-tipo-filter')?.value||'';
+  const ord = document.getElementById('mov-ord-filter')?.value||'rec';
+  const el = document.getElementById('mov-hist');
+  if(!el) return;
+  let fil = historico.filter(h =>
+    (!tipo || h.tipo===tipo) &&
+    (!q || h.itemNome.toLowerCase().includes(q) || (h.responsavel||'').toLowerCase().includes(q))
+  );
+  if(ord==='az') fil.sort((a,b)=>a.itemNome.localeCompare(b.itemNome,'pt-BR'));
+  else if(ord==='za') fil.sort((a,b)=>b.itemNome.localeCompare(a.itemNome,'pt-BR'));
+  el.innerHTML = fil.length ? fil.slice(0,10).map(h=>`
+    <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
+      <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span>
+      <span style="flex:1">${h.itemNome}</span>
+      <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span>
+    </div>`).join('') : '<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';
+}
+
+function filtrarManutencao(){
+  const q = (document.getElementById('man-search')?.value||'').toLowerCase();
+  const status = document.getElementById('man-status-filter')?.value||'';
+  const ord = document.getElementById('man-ord')?.value||'az';
+  let fil = manutencoes.filter(m =>
+    (!status || m.status===status) &&
+    (!q || (m.equipamento||'').toLowerCase().includes(q) || (m.responsavel||'').toLowerCase().includes(q))
+  );
+  if(ord==='az') fil.sort((a,b)=>(a.equipamento||'').localeCompare(b.equipamento||'','pt-BR'));
+  else if(ord==='za') fil.sort((a,b)=>(b.equipamento||'').localeCompare(a.equipamento||'','pt-BR'));
+  // Re-render with filtered list
+  const container = document.getElementById('lista-manutencao');
+  if(!container) return;
+  renderListaManutencao(fil);
 }
 
 // ===================== FIM FASE 2B =====================
