@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14532d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Muda ERP">
 <title>ERP — Muda Paisagismo</title>
 <meta name="description" content="Sistema ERP — Muda Paisagismo">
 <meta name="theme-color" content="#16a34a">
@@ -2310,7 +2314,7 @@ function abrirDetalhesForn(id){
 }
 function abrirModalForn(id){
   editFornId = id || null;
-  const f = id ? fornecedores.find(x => x.id === id) : null;
+  const f = id ? fornecedores.find(x => String(x.id) === String(id)) : null;
   document.getElementById('mf-title').textContent = f ? '✏️ Editar Fornecedor' : '➕ Novo Fornecedor';
   document.getElementById('mf-nome').value = f ? f.nome : '';
   document.getElementById('mf-tel').value = f ? (f.tel || '') : '';
@@ -2487,7 +2491,7 @@ let orcamentoProjetoId = null;
 function abrirOrcamento(id){
   if(!pode('editar')) return showToast('Sem permissão.','err');
   orcamentoProjetoId = id;
-  const p = projetos.find(x => x.id === id);
+  const p = projetos.find(x => String(x.id) === String(id));
   if(!p) return;
   document.getElementById('mo-title').textContent = '💰 Orçamento — ' + p.nome;
   document.getElementById('mo-previsto').value = p.orcamentoPrevisto || '';
@@ -2495,7 +2499,7 @@ function abrirOrcamento(id){
   // Calcular gasto real via saídas do histórico
   const saidas = historico.filter(h => h.projeto === p.nome && h.tipo === 'saida');
   const gastoReal = saidas.reduce((acc, h) => {
-    const prod = produtos.find(x => x.id == h.itemId);
+    const prod = produtos.find(x => String(x.id) === String(h.itemId));
     return acc + (Number(prod?.custo || 0) * Number(h.quantidade || 0));
   }, 0);
   
@@ -2504,7 +2508,7 @@ function abrirOrcamento(id){
   // Montar lista de materiais usados
   const matMap = {};
   saidas.forEach(h => {
-    const prod = produtos.find(x => x.id == h.itemId);
+    const prod = produtos.find(x => String(x.id) === String(h.itemId));
     if(!matMap[h.itemId]) matMap[h.itemId] = {nome: h.itemNome, qty: 0, custo: Number(prod?.custo || 0), unidade: prod?.unidade || 'un'};
     matMap[h.itemId].qty += Number(h.quantidade);
   });
@@ -2547,7 +2551,7 @@ function calcularOrcamento(){
 function salvarOrcamento(){
   if(!orcamentoProjetoId) return;
   const previsto = document.getElementById('mo-previsto').value;
-  projetos = projetos.map(p => p.id === orcamentoProjetoId ? {...p, orcamentoPrevisto: previsto} : p);
+  projetos = projetos.map(p => String(p.id) === String(orcamentoProjetoId) ? {...p, orcamentoPrevisto: previsto} : p);
   // sync to sheets in background
   try{const _p=projetos.find(x=>String(x.id)===String(osProjetoId)||String(x.id)===String(orcamentoProjetoId));if(_p)syncProjetoSheets(_p);}catch(e){}
   showToast('Orçamento salvo!');
@@ -2633,10 +2637,7 @@ function renderMateriais(p){
           <th style="text-align:center">Precisa</th>
           <th style="text-align:center">Estoque</th>
           <th style="text-align:center">Situação</th>
-          <th style="text-align:center">⏳ Pendente</th>
           <th style="text-align:center">✅ Separado</th>
-          <th style="text-align:center">❌ Faltando</th>
-          <th style="text-align:center">🔄 Substituído</th>
           <th style="text-align:center">Ações</th>
         </tr>
       </thead>
@@ -2675,10 +2676,12 @@ function renderMateriais(p){
               ${estoqueAtual !== null ? estoqueAtual+' '+(m.unidade||'un') : '—'}
             </td>
             <td style="text-align:center;font-weight:700;color:${sitCor};font-size:12px">${situacao}</td>
-            <td style="text-align:center"><button class="st-btn pendente ${st==='pendente'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'pendente')">⏳</button></td>
-            <td style="text-align:center"><button class="st-btn separado ${st==='separado'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'separado')">✅</button></td>
-            <td style="text-align:center"><button class="st-btn faltando ${st==='faltando'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'faltando')">❌</button></td>
-            <td style="text-align:center"><button class="st-btn substituido ${st==='substituido'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'substituido')">🔄</button></td>
+            <td style="text-align:center">
+              <input type="checkbox" style="width:18px;height:18px;cursor:pointer;accent-color:#16a34a"
+                ${st==='separado'?'checked':''} 
+                onchange="setMatStatus('${osProjetoId}',${i},this.checked?'separado':'pendente')"
+                onclick="event.stopPropagation()">
+            </td>
             <td style="text-align:center">
               <div style="display:flex;gap:4px;justify-content:center;align-items:center">
                 ${m.itemId&&st==='separado'&&!m.debitado?`<button class="btn-out" style="font-size:11px;padding:3px 7px" onclick="debitarItemEstoque('${osProjetoId}',${i})" title="Debitar do estoque">📤</button>`:''}
@@ -2698,7 +2701,7 @@ function renderMateriais(p){
 function setMatStatus(projId, idx, status){
   const p = projetos.find(x => String(x.id) === String(projId));
   if(!p || !p.materiais) return;
-  p.materiais[idx].status = p.materiais[idx].status === status ? 'pendente' : status;
+  p.materiais[idx].status = status;
   renderMateriais(p);
   renderProjetos();
   syncProjetoSheets(p);
@@ -2710,7 +2713,7 @@ function editarObsMat(projId, idx){
 }
 
 function salvarObsMat(projId, idx, val){
-  const p = projetos.find(x => x.id === projId);
+  const p = projetos.find(x => String(x.id) === String(projId));
   if(!p || !p.materiais) return;
   p.materiais[idx].obs = val;
   // sync to sheets in background
@@ -2720,7 +2723,7 @@ function salvarObsMat(projId, idx, val){
 
 function removerMat(projId, idx){
   if(!confirm('Remover este material?')) return;
-  const p = projetos.find(x => x.id === projId);
+  const p = projetos.find(x => String(x.id) === String(projId));
   if(!p) return;
   p.materiais.splice(idx, 1);
   // sync to sheets in background
@@ -2757,7 +2760,7 @@ function salvarMaterial(){
 }
 
 function imprimirOS(){
-  const p = projetos.find(x => x.id === osProjetoId);
+  const p = projetos.find(x => String(x.id) === String(osProjetoId));
   if(!p) return;
   const fmtData = d => {
     if(!d) return '—';
