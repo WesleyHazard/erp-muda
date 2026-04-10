@@ -428,7 +428,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     </div>
 
     <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn-confirmar" onclick="salvarProjeto()">Salvar Projeto</button>
+      <button class="btn-confirmar" onclick="salvarProjeto()">💾 Salvar e Fechar</button>
       <button class="btn-gray" onclick="fecharModal('modal-proj')">Cancelar</button>
     </div>
   </div>
@@ -547,6 +547,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn-green" style="font-size:12px" onclick="abrirAddMaterial()">+ Adicionar Material</button>
       <button class="btn-gray" style="font-size:12px" onclick="imprimirOS()">🖨️ Imprimir OS</button>
+      <button class="btn-confirmar" style="font-size:12px;padding:8px 14px" onclick="salvarEFecharOS()">💾 Salvar e Fechar</button>
     </div>
   </div>
   <div id="add-material-form" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:12px">
@@ -1653,7 +1654,28 @@ async function carregarDados(){
     renderDashboard();renderEstoque();popularMovSels();renderMovHistResumo();renderMovBaixo();gerarNotificacoes();
   }catch(e){showToast('Erro ao carregar dados.','err');}
 }
-function getCodigo(p){const idx=produtos.findIndex(x=>x.id===p.id);return 'MP-'+(CATS[p.categoria]?.prefix||'GER')+'-'+String(idx+1).padStart(3,'0');}
+function getCodigo(p){
+  // Use stored code if exists
+  if(p.codigoInterno) return p.codigoInterno;
+  // Generate from position
+  const idx=produtos.findIndex(x=>x.id===p.id);
+  return 'MP-'+(CATS[p.categoria]?.prefix||'GER')+'-'+String(idx+1).padStart(3,'0');
+}
+
+function proximoCodigo(categoria){
+  const prefix = CATS[categoria]?.prefix || 'GER';
+  // Find all existing codes for this category
+  const codigos = produtos
+    .filter(p=>p.categoria===categoria)
+    .map(p=>p.codigoInterno||getCodigo(p))
+    .map(c=>{
+      const parts = c.split('-');
+      return parts.length===3 ? Number(parts[2]) : 0;
+    })
+    .filter(n=>!isNaN(n));
+  const max = codigos.length ? Math.max(...codigos) : 0;
+  return 'MP-'+prefix+'-'+String(max+1).padStart(3,'0');
+}
 
 function renderDashboard(){
   const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));
@@ -1682,6 +1704,48 @@ function renderDashboard(){
 }
 
 function col(id){return document.getElementById(id)?.checked;}
+async function editarItem(id){
+  if(!pode('editar'))return;
+  const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;
+  editItemId=id;fotoBase64=p.foto||null;
+  document.getElementById('fi-nome').value=p.nome;
+  document.getElementById('fi-sku').value=p.sku||'';
+  document.getElementById('fi-loc').value=p.localizacao||'';
+  document.getElementById('fi-cat').value=p.categoria;
+  document.getElementById('fi-un').value=p.unidade;
+  document.getElementById('fi-qty').value=p.quantidade;
+  document.getElementById('fi-min').value=p.estoqueMinimo||'';
+  document.getElementById('fi-max').value=p.estoqueMaximo||'';
+  document.getElementById('fi-forn').value=p.fornecedor||'';
+  document.getElementById('fi-custo').value=p.custo||'';
+  document.getElementById('fi-desc').value=p.descricao||'';
+  document.getElementById('fi-obs').value=p.observacoes||'';
+  if(p.foto){document.getElementById('fi-foto-preview').src=p.foto;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';}
+  document.getElementById('form-item-title').textContent='✏️ Editar Item';
+  document.querySelector('#form-item .btn-green').textContent='Salvar Alterações';
+  document.getElementById('form-item').style.display='block';
+  window.scrollTo(0,0);
+}
+
+async function deletarItem(id){
+  if(!pode('deletar'))return;
+  if(!confirm('Remover este item?'))return;
+  const pDel=produtos.find(x=>String(x.id)===String(id));
+  produtos=produtos.filter(x=>String(x.id)!==String(id));
+  renderEstoque();
+  showToast('Removido.');
+  registrarLog('exclusao',`Item excluído: ${pDel?.nome||id}`,'🗑️');
+  try{await api({action:'deleteProduto',id});}catch(e){showToast('Erro ao sincronizar.','err');}
+}
+
+function abrirItemPorQR(cod){
+  const p=produtos.find((x,i)=>getCodigo(x)===cod);
+  if(!p){showToast('Item não encontrado: '+cod,'err');return;}
+  switchTab('movimentacao',document.querySelectorAll('.tab')[2]);
+  selecionarItemMov(p.id);
+  showToast('📦 '+p.nome+' — Saldo: '+p.quantidade+' '+p.unidade);
+}
+
 function renderEstoque(){
   const q=document.getElementById('est-search').value.toLowerCase();
   const cat=document.getElementById('est-cat').value;
@@ -1705,7 +1769,10 @@ function renderEstoque(){
       ${col('col-foto')?`<div class="ic-foto">${p.foto?`<img src="${p.foto}" alt="">`:c?.icon||'📦'}</div>`:''}
       <div class="ic-info"><div class="ic-nome">${p.nome}</div>
         ${col('col-loc')&&p.localizacao?`<div class="ic-loc">📍 ${p.localizacao}</div>`:''}
-        <div class="ic-codes">${col('col-codigo')?`<span class="ic-code">🏷️ ${cod}</span>`:''}${col('col-sku')&&p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}</div>
+        <div class="ic-codes">
+          ${col('col-codigo')?`<span class="ic-code" style="font-size:11px;font-weight:800">🏷️ ${cod}</span>`:''}
+          ${col('col-sku')&&p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}
+        </div>
         <div class="ic-meta">${col('col-forn')&&p.fornecedor?`<span>🏭 ${p.fornecedor}</span>`:''}${col('col-custo')&&Number(p.custo)>0?`<span>💰 R$ ${Number(p.custo).toFixed(2)}</span>`:''}${col('col-desc')&&p.descricao?`<span>📝 ${p.descricao}</span>`:''}${p.observacoes?`<span style="color:#d97706">💬 ${p.observacoes}</span>`:''}</div>
       </div>
       ${col('col-cat')?`<span class="pill ${low?'low':''}">${c?.label||p.categoria}</span>`:''}
@@ -1724,40 +1791,35 @@ function limparForm(){['nome','sku','loc','qty','min','max','forn','custo','desc
 function previewFoto(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{fotoBase64=ev.target.result;document.getElementById('fi-foto-preview').src=fotoBase64;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';};reader.readAsDataURL(file);}
 async function salvarItem(){
   if(!pode('cadastrar'))return showToast('Sem permissão.','err');
-  const nome=document.getElementById('fi-nome').value.trim();const qty=document.getElementById('fi-qty').value;
+  const nome=document.getElementById('fi-nome').value.trim();
+  const qty=document.getElementById('fi-qty').value;
   if(!nome||qty==='')return showToast('Preencha nome e quantidade.','err');
-  const p={nome,sku:document.getElementById('fi-sku').value,localizacao:document.getElementById('fi-loc').value,categoria:document.getElementById('fi-cat').value,quantidade:qty,unidade:document.getElementById('fi-un').value,estoqueMinimo:document.getElementById('fi-min').value||0,estoqueMaximo:document.getElementById('fi-max').value||0,fornecedor:document.getElementById('fi-forn').value,custo:document.getElementById('fi-custo').value||0,descricao:document.getElementById('fi-desc').value,observacoes:document.getElementById('fi-obs').value||'',foto:fotoBase64||''};
-  try{if(editItemId){await api({action:'editProduto',id:editItemId,...p});showToast('Item atualizado!');}else{await api({action:'addProduto',...p});showToast('Item cadastrado!');}cancelarForm();await carregarDados();}catch(e){showToast('Erro ao salvar.','err');}
-}
-function editarItem(id){if(!pode('editar'))return;const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;editItemId=id;fotoBase64=p.foto||null;document.getElementById('fi-nome').value=p.nome;document.getElementById('fi-sku').value=p.sku||'';document.getElementById('fi-loc').value=p.localizacao||'';document.getElementById('fi-cat').value=p.categoria;document.getElementById('fi-un').value=p.unidade;document.getElementById('fi-qty').value=p.quantidade;document.getElementById('fi-min').value=p.estoqueMinimo||'';document.getElementById('fi-max').value=p.estoqueMaximo||'';document.getElementById('fi-forn').value=p.fornecedor||'';document.getElementById('fi-custo').value=p.custo||'';document.getElementById('fi-desc').value=p.descricao||'';document.getElementById('fi-obs').value=p.observacoes||'';if(p.foto){document.getElementById('fi-foto-preview').src=p.foto;document.getElementById('foto-preview-wrap').style.display='block';document.getElementById('foto-placeholder').style.display='none';}document.getElementById('form-item-title').textContent='✏️ Editar Item';document.querySelector('#form-item .btn-green').textContent='Salvar Alterações';document.getElementById('form-item').style.display='block';window.scrollTo(0,0);}
-async function deletarItem(id){
-  if(!pode('deletar'))return;
-  if(!confirm('Remover este item?'))return;
-  const pDel=produtos.find(x=>String(x.id)===String(id));
-  produtos=produtos.filter(x=>String(x.id)!==String(id));
-  renderEstoque();
-  showToast('Removido.');
-  registrarLog('exclusao',`Item excluído: ${pDel?.nome||id}`,'🗑️');
-  try{await api({action:'deleteProduto',id});}catch(e){showToast('Erro ao sincronizar.','err');}
+  const categoria=document.getElementById('fi-cat').value;
+  // Generate sequential code for new items, keep existing for edits
+  const codigoInterno = editItemId ?
+    (produtos.find(x=>String(x.id)===String(editItemId))?.codigoInterno || proximoCodigo(categoria)) :
+    proximoCodigo(categoria);
+  const p={nome,sku:document.getElementById('fi-sku').value,localizacao:document.getElementById('fi-loc').value,categoria,quantidade:qty,unidade:document.getElementById('fi-un').value,estoqueMinimo:document.getElementById('fi-min').value||0,estoqueMaximo:document.getElementById('fi-max').value||0,fornecedor:document.getElementById('fi-forn').value,custo:document.getElementById('fi-custo').value||0,descricao:document.getElementById('fi-desc').value,observacoes:document.getElementById('fi-obs').value||'',foto:fotoBase64||'',codigoInterno};
+  try{
+    if(editItemId){
+      await api({action:'editProduto',id:editItemId,...p});
+      showToast('Item atualizado!');
+    }else{
+      await api({action:'addProduto',...p});
+      showToast('Item cadastrado! Código: '+codigoInterno+' 🏷️');
+    }
+    cancelarForm();
+    await carregarDados();
+    // Auto-show QR for new item after data loads
+    if(!editItemId){
+      setTimeout(()=>{
+        const novoProd = produtos.find(x=>x.codigoInterno===codigoInterno);
+        if(novoProd && pode('qr')) abrirQR(novoProd.id);
+      }, 1000);
+    }
+  }catch(e){showToast('Erro ao salvar.','err');}
 }
 
-function abrirQR(id){if(!pode('qr'))return showToast('Apenas administradores.','err');const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;qrItemAtual=p;const cod=getCodigo(p);const url=window.location.origin+window.location.pathname+'?item='+cod;document.getElementById('qr-canvas').innerHTML='';new QRCode(document.getElementById('qr-canvas'),{text:url,width:160,height:160,colorDark:'#14532d',colorLight:'#ffffff'});document.getElementById('qr-nome').textContent=p.nome;document.getElementById('qr-codes').innerHTML=`<span class="ic-code">🏷️ ${cod}</span>${p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}`;document.getElementById('qr-loc').textContent=p.localizacao?'📍 '+p.localizacao:'';document.getElementById('modal-qr').classList.add('open');}
-function imprimirEtiqueta(){if(!qrItemAtual)return;const p=qrItemAtual;const cod=getCodigo(p);const url=window.location.origin+window.location.pathname+'?item='+cod;const win=window.open('','_blank','width=400,height=300');win.document.write(`<html><head><title>Etiqueta</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head><body style="font-family:Arial;text-align:center;padding:20px"><div id="qr"></div><div style="font-weight:700;font-size:14px;margin-top:8px">${p.nome}</div><div style="color:#16a34a;font-weight:700;font-size:12px">${cod}</div>${p.sku?`<div style="color:#7c3aed;font-size:11px">SKU: ${p.sku}</div>`:''}${p.localizacao?`<div style="color:#6b7280;font-size:11px">📍 ${p.localizacao}</div>`:''}<script>new QRCode(document.getElementById('qr'),{text:'${url}',width:120,height:120,colorDark:'#14532d'});setTimeout(()=>window.print(),500);<\/script></body></html>`);win.document.close();}
-function gerarTodasEtiquetas(){if(!produtos.length)return showToast('Nenhum item.','err');const win=window.open('','_blank');const itens=produtos.map(p=>({p,cod:getCodigo(p),url:window.location.origin+window.location.pathname+'?item='+getCodigo(p)}));win.document.write(`<html><head><title>Etiquetas</title><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script><style>body{font-family:Arial}.etiq{display:inline-flex;flex-direction:column;align-items:center;border:1px solid #333;border-radius:6px;padding:8px;margin:4px;width:140px;break-inside:avoid;vertical-align:top}.nome{font-size:9px;font-weight:700;text-align:center;margin-top:5px}.cod{font-size:8px;color:#16a34a;font-weight:700}@media print{button{display:none}}</style></head><body><button onclick="window.print()" style="margin:10px;padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimir Todas</button><div>${itens.map((x,i)=>`<div class="etiq"><div id="qr${i}"></div><div class="nome">${x.p.nome}</div><div class="cod">${x.cod}</div></div>`).join('')}</div><script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script></body></html>`);win.document.close();}
-function abrirItemPorQR(cod){
-  const p=produtos.find((x,i)=>getCodigo(x)===cod);
-  if(!p){ showToast('Item não encontrado: '+cod,'err'); return; }
-  // Go directly to movimentacao with item selected
-  switchTab('movimentacao',document.querySelectorAll('.tab')[2]);
-  selecionarItemMov(p.id);
-  showToast('📦 '+p.nome+' — Saldo: '+p.quantidade+' '+p.unidade);
-}
-
-function filtrarItens(){const q=document.getElementById('mov-search').value.toLowerCase();const dd=document.getElementById('mov-drop');if(!q){dd.classList.remove('open');return;}const res=produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);dd.innerHTML=res.length?res.map(p=>`<div class="idd-opt" onclick="selecionarItemMov('${p.id}')"><div>${p.nome}</div><div style="display:flex;gap:6px;margin-top:1px"><span style="font-size:10px;color:#16a34a;font-weight:700">${getCodigo(p)}</span>${p.sku?`<span style="font-size:10px;color:#7c3aed">SKU:${p.sku}</span>`:''}<span style="font-size:10px;color:#6b7280">Saldo: ${p.quantidade} ${p.unidade}</span></div></div>`).join(''):'<div class="idd-opt" style="color:#9ca3af">Nenhum item encontrado</div>';dd.classList.add('open');}
-function selecionarItemMov(id){movItemTab=id;const p=produtos.find(x=>String(x.id)===String(id));if(!p)return;document.getElementById('mov-search').value=p.nome;document.getElementById('mov-drop').classList.remove('open');const sc=document.getElementById('mov-selected');sc.style.display='block';document.getElementById('isc-nome').textContent=p.nome;const low=p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo);document.getElementById('isc-info').innerHTML=`<span style="color:${low?'#dc2626':'#16a34a'};font-weight:700">${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}</span><span style="color:#6b7280">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}</span><span class="ic-code">${getCodigo(p)}</span>${p.localizacao?`<span style="color:#7c3aed;font-size:10px">📍 ${p.localizacao}</span>`:''}`;}
-function fecharDrop(){document.getElementById('mov-drop').classList.remove('open');}
-function setMovTipo(t){movTipoTab=t;document.getElementById('mov-tab-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mov-tab-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mov-motivo2');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?motivosEntrada:motivosSaida).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
-function popularMovSels(){setMovTipo('entrada');['mov-proj2','mm-projeto'].forEach(id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Sem projeto</option>';projetos.filter(p=>p.status==='ativo').forEach(p=>s.innerHTML+=`<option value="${p.nome}">${p.nome}</option>`);});}
 async function salvarMovTab(){
   if(!movItemTab)return showToast('Selecione um item.','err');
   const qty=Number(document.getElementById('mov-qty2').value);const resp=document.getElementById('mov-resp2').value.trim();
@@ -2398,7 +2460,15 @@ function renderMateriais(p){
                   onblur="salvarObsMat('${osProjetoId}',${i},this.value)">
               </div>
             </td>
-            <td style="text-align:center;font-weight:700">${m.qty} ${m.unidade||'un'}</td>
+            <td style="text-align:center">
+              <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+                <input type="number" value="${m.qty}" min="1"
+                  style="width:60px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-weight:700;text-align:center"
+                  onchange="editarQtyMat('${osProjetoId}',${i},this.value)"
+                  onclick="event.stopPropagation()">
+                <span style="font-size:11px;color:#6b7280">${m.unidade||'un'}</span>
+              </div>
+            </td>
             <td style="text-align:center;font-weight:700;color:${estoqueAtual===null?'#9ca3af':estoqueAtual>=m.qty?'#16a34a':estoqueAtual>0?'#d97706':'#dc2626'}">
               ${estoqueAtual !== null ? estoqueAtual+' '+(m.unidade||'un') : '—'}
             </td>
@@ -2427,9 +2497,9 @@ function setMatStatus(projId, idx, status){
   const p = projetos.find(x => String(x.id) === String(projId));
   if(!p || !p.materiais) return;
   p.materiais[idx].status = p.materiais[idx].status === status ? 'pendente' : status;
-  syncProjetoSheets(p);
   renderMateriais(p);
   renderProjetos();
+  syncProjetoSheets(p);
 }
 
 function editarObsMat(projId, idx){
@@ -3105,15 +3175,24 @@ function salvarMaterialEstoque(){
   const p = projetos.find(x=>String(x.id)===String(osProjetoId));
   if(!p) return;
   if(!p.materiais) p.materiais = [];
-  p.materiais.push({
-    nome: matEstSelecionado.nome,
-    qty: Number(qty),
-    unidade: matEstSelecionado.unidade,
-    obs: document.getElementById('mat-obs-est').value,
-    status: 'pendente',
-    itemId: matEstSelecionado.id,
-    debitado: false
-  });
+  // Check if item already exists in list
+  const existingIdx = p.materiais.findIndex(m=>String(m.itemId)===String(matEstSelecionado.id));
+  if(existingIdx >= 0){
+    if(confirm(`"${matEstSelecionado.nome}" já está na lista com ${p.materiais[existingIdx].qty} ${p.materiais[existingIdx].unidade}.\n\nDeseja SOMAR as quantidades? (${p.materiais[existingIdx].qty} + ${Number(qty)} = ${p.materiais[existingIdx].qty + Number(qty)} ${matEstSelecionado.unidade})`)){
+      p.materiais[existingIdx].qty += Number(qty);
+      if(document.getElementById('mat-obs-est').value) p.materiais[existingIdx].obs = document.getElementById('mat-obs-est').value;
+    }
+  } else {
+    p.materiais.push({
+      nome: matEstSelecionado.nome,
+      qty: Number(qty),
+      unidade: matEstSelecionado.unidade,
+      obs: document.getElementById('mat-obs-est').value,
+      status: 'pendente',
+      itemId: matEstSelecionado.id,
+      debitado: false
+    });
+  }
   syncProjetoSheets(p);
   cancelarAddMaterial();
   renderMateriais(p);
@@ -3298,6 +3377,39 @@ function imprimirQRSistema(){
     setTimeout(()=>window.print(),600);
   <\/script></body></html>`);
   win.document.close();
+}
+
+
+function editarQtyMat(projId, idx, val){
+  const qty = Number(val);
+  if(!qty || qty <= 0){ showToast('Quantidade inválida.','err'); return; }
+  const p = projetos.find(x=>String(x.id)===String(projId));
+  if(!p || !p.materiais) return;
+  p.materiais[idx].qty = qty;
+  renderMateriais(p);
+  renderProjetos();
+  syncProjetoSheets(p);
+}
+
+
+function salvarEFecharOS(){
+  const p = projetos.find(x=>String(x.id)===String(osProjetoId));
+  if(p){
+    syncProjetoSheets(p);
+    showToast('OS salva com sucesso!');
+  }
+  fecharModal('modal-os');
+}
+
+
+function salvarPerfilEFechar(){
+  salvarPerfil();
+  fecharModal('modal-perfil');
+}
+
+function salvarOrcamentoEFechar(){
+  salvarOrcamento();
+  fecharModal('modal-orcamento');
 }
 
 // ===================== FIM FASE 2B =====================
