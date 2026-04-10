@@ -1266,9 +1266,10 @@ async function fazerLogin(){
   carregarManutencoes();
   aplicarAparencia();
   registrarLog('login', `Login realizado`, '🔐');
-  carregarDados();
   const params=new URLSearchParams(window.location.search);
-  if(params.get('item'))setTimeout(()=>abrirItemPorQR(params.get('item')),1000);
+  const qrItem = params.get('item');
+  await carregarDados();
+  if(qrItem) setTimeout(()=>abrirItemPorQR(qrItem), 500);
 }
 
 function fazerLogout(){
@@ -1433,8 +1434,10 @@ function salvarManutencao(){
   else { manutencoes.push(m); }
   salvarManutencoes();
   fecharModal('modal-manutencao');
-  // Re-render module
   atualizarTabsModulos();
+  // If currently on manutencao tab, re-click it
+  const manTab = Array.from(document.querySelectorAll('.tab-modulo')).find(t=>t.textContent.includes('Manutenção'));
+  if(manTab && document.getElementById('sec-mod-manutencao')?.classList.contains('active')) manTab.click();
   showToast(editManId !== null ? 'Registro atualizado!' : 'Registro salvo!');
   registrarLog('edicao', `Manutenção ${editManId!==null?'atualizada':'registrada'}: ${equip}`, '🔧');
 }
@@ -1492,14 +1495,17 @@ function renderNotifs(){
 
 function navegarNotif(aba){
   document.getElementById('notif-panel').classList.remove('open');
-  // Find the right tab
-  let tabEl = null;
-  if(aba === 'manutencao'){
-    tabEl = Array.from(document.querySelectorAll('.tab-modulo')).find(t=>t.textContent.includes('Manutenção'));
-    if(tabEl){ tabEl.click(); return; }
-  }
+  // Check module tabs first
+  const modTab = Array.from(document.querySelectorAll('.tab-modulo')).find(t=>
+    t.textContent.toLowerCase().includes(aba.toLowerCase())
+  );
+  if(modTab){ modTab.click(); return; }
+  // Map aba name to tab index
   const tabs = document.querySelectorAll('.tab:not(.tab-modulo)');
-  const tabMap = {dashboard:0, estoque:1, movimentacao:2, historico:3, reposicao:4, projetos:5, fornecedores:6, relatorios:7};
+  const tabMap = {
+    dashboard:0, estoque:1, movimentacao:2, historico:3,
+    reposicao:4, projetos:5, fornecedores:6, relatorios:7, configuracoes:8
+  };
   const idx = tabMap[aba];
   if(idx !== undefined && tabs[idx]){ switchTab(aba, tabs[idx]); }
 }
@@ -1718,6 +1724,7 @@ function abrirModalProj(id){
   mpMateriais = p ? (p.materiais||[]).map(m=>({...m, estoqueAtual: produtos.find(x=>String(x.id)===String(m.itemId))?.quantidade||0})) : [];
   renderMpLista();
   document.getElementById('mp-add-mat-form').style.display='none';
+  renderMpLista();
   document.getElementById('modal-proj').classList.add('open');
 }
 
@@ -1857,7 +1864,7 @@ function abrirModalForn(id){
     Object.entries(CATS).map(([id,c]) => `<option value="${id}" ${f?.categoria===id?'selected':''}>${c.icon} ${c.label}</option>`).join('');
   document.getElementById('modal-forn').classList.add('open');
 }
-async function salvarFornecedor(){const nome=document.getElementById('mf-nome').value.trim();if(!nome)return showToast('Informe o nome.','err');const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};try{if(editFornId){await api({action:'editFornecedor',...f});}else{await api({action:'addFornecedor',...f});}showToast(editFornId?'Atualizado!':'Cadastrado!');registrarLog('cadastro',`Fornecedor ${editFornId?'atualizado':'cadastrado'}: ${nome}`,'🏭');fecharModal('modal-forn');await carregarDados();}catch(e){showToast('Erro ao salvar.','err');}}
+async function salvarFornecedor(){const nome=document.getElementById('mf-nome').value.trim();if(!nome)return showToast('Informe o nome.','err');const f={id:editFornId||Date.now().toString(),nome,tel:document.getElementById('mf-tel').value,email:document.getElementById('mf-email').value,categoria:document.getElementById('mf-cat').value,obs:document.getElementById('mf-obs').value};try{if(editFornId){await api({action:'editFornecedor',...f});}else{await api({action:'addFornecedor',...f});}showToast(editFornId?'Atualizado!':'Cadastrado!');registrarLog('cadastro',`Fornecedor ${editFornId?'atualizado':'cadastrado'}: ${nome}`,'🏭');fecharModal('modal-forn');await carregarDados();renderFornecedores();}catch(e){showToast('Erro ao salvar.','err');}}
 async function deletarForn(id){if(!confirm('Remover?'))return;try{await api({action:'deleteFornecedor',id});showToast('Removido.');await carregarDados();}catch(e){showToast('Erro.','err');}}
 
 function abrirPerfil(){const perfil=lso('perfil_'+usuarioAtual.email);document.getElementById('perf-nome').value=perfil.nome||usuarioAtual.nome;document.getElementById('perf-cargo').value=perfil.cargo||'';document.getElementById('perf-tel').value=perfil.tel||'';document.getElementById('perf-email').value=usuarioAtual.email;document.getElementById('perfil-avatar-inicial').textContent=usuarioAtual.nome[0];if(perfil.foto)document.getElementById('perfil-avatar-display').innerHTML=`<img src="${perfil.foto}">`;if(usuarioAtual.nivel==='admin'){document.getElementById('secao-usuarios').style.display='block';renderUsuariosPerfil();}document.getElementById('modal-perfil').classList.add('open');}
