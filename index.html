@@ -176,6 +176,29 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .parado-badge{background:#f3f4f6;color:#6b7280;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
 .parado-badge.critico{background:#fef2f2;color:#dc2626}
 .parado-badge.atencao{background:#fffbeb;color:#d97706}
+/* OS TABLE LAYOUT */
+.os-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.os-table th{background:#f0fdf4;color:#14532d;font-weight:700;padding:9px 12px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:11px;white-space:nowrap}
+.os-table td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+.os-table tr:hover td{background:#fafafa}
+.os-table tr.status-ok td{background:#f0fdf4}
+.os-table tr.status-faltando td{background:#fffafa}
+.os-table tr.status-substituido td{background:#fffbeb}
+.status-col{display:flex;gap:4px;flex-wrap:nowrap}
+.st-btn{border:none;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
+.st-btn.pendente{background:#f3f4f6;color:#6b7280}
+.st-btn.pendente.active{background:#6b7280;color:#fff}
+.st-btn.separado{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+.st-btn.separado.active{background:#16a34a;color:#fff}
+.st-btn.faltando{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.st-btn.faltando.active{background:#dc2626;color:#fff}
+.st-btn.substituido{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+.st-btn.substituido.active{background:#d97706;color:#fff}
+.qty-badge{font-size:12px;font-weight:700}
+.qty-ok{color:#16a34a}
+.qty-warn{color:#d97706}
+.qty-err{color:#dc2626}
+
 /* MANUTENÇÃO */
 .man-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:box-shadow .2s}
 .man-card:hover{box-shadow:0 2px 8px #16a34a22}
@@ -502,7 +525,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 
 <div class="modal-bg" id="modal-os">
-<div class="modal" style="max-width:700px">
+<div class="modal" style="max-width:900px">
   <div class="modal-header">
     <div class="modal-title" id="mos-title">📋 Ordem de Serviço</div>
     <button class="modal-close" onclick="fecharModal('modal-os')">×</button>
@@ -623,7 +646,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 </div>
 
 <div class="modal-bg" id="modal-proj-det">
-<div class="modal" style="max-width:700px">
+<div class="modal" style="max-width:900px">
   <div class="modal-header">
     <div class="modal-title" id="mpd-title">🏗️ Projeto</div>
     <button class="modal-close" onclick="fecharModal('modal-proj-det')">×</button>
@@ -2111,33 +2134,69 @@ function renderMateriais(p){
   const statusLabel = {separado:'✅ Separado', faltando:'❌ Faltando', substituido:'🔄 Substituído', pendente:'⏳ Pendente'};
   const statusClass = {separado:'ok', faltando:'faltando', substituido:'substituido', pendente:''};
   
-  document.getElementById('lista-materiais').innerHTML = mats.length ? mats.map((m,i) => `
-    <div class="mat-item ${statusClass[m.status||'pendente']}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div style="flex:1;min-width:140px">
-          <div style="font-weight:700;font-size:13px">${m.nome}</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px">
-            Qtd: <strong>${m.qty} ${m.unidade||'un'}</strong>
-            ${m.itemId?`<span style="color:#16a34a;font-size:10px;font-weight:700;margin-left:6px">📦 Estoque: ${produtos.find(x=>String(x.id)===String(m.itemId))?.quantidade||'?'} ${m.unidade||''}</span>`:'<span style="font-size:10px;color:#9ca3af;margin-left:4px">(manual)</span>'}
-            ${m.obs?` · 💬 ${m.obs}`:''}
-          </div>
-        </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
-          <button class="mat-status-btn separado ${m.status==='separado'?'active-separado':''}" onclick="setMatStatus('${osProjetoId}',${i},'separado')">✅ Sep.</button>
-          <button class="mat-status-btn faltando ${m.status==='faltando'?'active-faltando':''}" onclick="setMatStatus('${osProjetoId}',${i},'faltando')">❌ Falta</button>
-          <button class="mat-status-btn substituido ${m.status==='substituido'?'active-substituido':''}" onclick="setMatStatus('${osProjetoId}',${i},'substituido')">🔄 Sub.</button>
-          ${m.itemId&&m.status==='separado'&&!m.debitado?`<button class="btn-out" style="font-size:11px;padding:3px 7px" onclick="debitarItemEstoque('${osProjetoId}',${i})" title="Debitar do estoque">📤 Debitar</button>`:''}
-          ${m.debitado?`<span style="font-size:10px;color:#16a34a;font-weight:700">✅ Debitado</span>`:''}
-          ${pode('editar')?`<button class="btn-gray" style="font-size:11px;padding:3px 7px" onclick="editarObsMat('${osProjetoId}',${i})">💬</button>`:''}
-          ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerMat('${osProjetoId}',${i})">🗑️</button>`:''}
-        </div>
-      </div>
-      <div id="obs-edit-${i}" style="display:none;margin-top:8px">
-        <input type="text" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:7px;font-size:12px" 
-          placeholder="Observação sobre este item..." value="${m.obs||''}"
-          onblur="salvarObsMat('${osProjetoId}',${i},this.value)">
-      </div>
-    </div>`).join('') 
+  const estMap = {};
+  produtos.forEach(p2 => { estMap[String(p2.id)] = p2; });
+
+  document.getElementById('lista-materiais').innerHTML = mats.length ? `
+    <div style="overflow-x:auto">
+    <table class="os-table">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th style="text-align:center">Precisa</th>
+          <th style="text-align:center">Estoque</th>
+          <th style="text-align:center">Situação</th>
+          <th style="text-align:center">⏳ Pendente</th>
+          <th style="text-align:center">✅ Separado</th>
+          <th style="text-align:center">❌ Faltando</th>
+          <th style="text-align:center">🔄 Substituído</th>
+          <th style="text-align:center">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${mats.map((m,i) => {
+          const prod = m.itemId ? estMap[String(m.itemId)] : null;
+          const estoqueAtual = prod ? Number(prod.quantidade) : null;
+          const falta = estoqueAtual !== null ? Math.max(0, m.qty - estoqueAtual) : null;
+          let situacao, sitCor;
+          if(estoqueAtual === null){ situacao='Manual'; sitCor='#9ca3af'; }
+          else if(estoqueAtual >= m.qty){ situacao='✅ OK'; sitCor='#16a34a'; }
+          else if(estoqueAtual > 0){ situacao=`🟡 Faltam ${falta}`; sitCor='#d97706'; }
+          else { situacao='🔴 Sem estoque'; sitCor='#dc2626'; }
+          const st = m.status || 'pendente';
+          const rowCls = st==='separado'?'status-ok':st==='faltando'?'status-faltando':st==='substituido'?'status-substituido':'';
+          return `<tr class="${rowCls}">
+            <td>
+              <div style="font-weight:700">${m.nome}</div>
+              ${m.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">💬 ${m.obs}</div>`:''}
+              <div id="obs-edit-${i}" style="display:none;margin-top:6px">
+                <input type="text" style="width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px"
+                  placeholder="Observação..." value="${m.obs||''}"
+                  onblur="salvarObsMat('${osProjetoId}',${i},this.value)">
+              </div>
+            </td>
+            <td style="text-align:center;font-weight:700">${m.qty} ${m.unidade||'un'}</td>
+            <td style="text-align:center;font-weight:700;color:${estoqueAtual===null?'#9ca3af':estoqueAtual>=m.qty?'#16a34a':estoqueAtual>0?'#d97706':'#dc2626'}">
+              ${estoqueAtual !== null ? estoqueAtual+' '+(m.unidade||'un') : '—'}
+            </td>
+            <td style="text-align:center;font-weight:700;color:${sitCor};font-size:12px">${situacao}</td>
+            <td style="text-align:center"><button class="st-btn pendente ${st==='pendente'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'pendente')">⏳</button></td>
+            <td style="text-align:center"><button class="st-btn separado ${st==='separado'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'separado')">✅</button></td>
+            <td style="text-align:center"><button class="st-btn faltando ${st==='faltando'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'faltando')">❌</button></td>
+            <td style="text-align:center"><button class="st-btn substituido ${st==='substituido'?'active':''}" onclick="setMatStatus('${osProjetoId}',${i},'substituido')">🔄</button></td>
+            <td style="text-align:center">
+              <div style="display:flex;gap:4px;justify-content:center;align-items:center">
+                ${m.itemId&&st==='separado'&&!m.debitado?`<button class="btn-out" style="font-size:11px;padding:3px 7px" onclick="debitarItemEstoque('${osProjetoId}',${i})" title="Debitar do estoque">📤</button>`:''}
+                ${m.debitado?`<span style="font-size:10px;color:#16a34a;font-weight:700" title="Já debitado do estoque">✅</span>`:''}
+                ${pode('editar')?`<button class="btn-gray" style="font-size:11px;padding:3px 6px" onclick="editarObsMat('${osProjetoId}',${i})" title="Observação">💬</button>`:''}
+                ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:3px 6px" onclick="removerMat('${osProjetoId}',${i})" title="Remover">🗑️</button>`:''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>`
     : '<div class="empty" style="padding:24px">Nenhum material adicionado. Clique em "+ Adicionar Material" para começar.</div>';
 }
 
@@ -2252,10 +2311,18 @@ function imprimirOS(){
     <div style="font-size:11px;margin-top:4px;opacity:.9">${separados} de ${mats.length} itens separados</div>
   </div>
   ${p.obs?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">📝 ${p.obs}</div>`:''}
-  <table><thead><tr><th>#</th><th>Material</th><th>Qtd. Necessária</th><th>Status</th><th>Observação</th></tr></thead><tbody>
-  ${mats.map((m,i)=>`<tr><td>${i+1}</td><td style="font-weight:600">${m.nome}</td><td>${m.qty} ${m.unidade}</td>
+  <table><thead><tr><th>#</th><th>Material</th><th style="text-align:center">Precisa</th><th style="text-align:center">Estoque</th><th style="text-align:center">Situação</th><th>Status</th><th>Observação</th></tr></thead><tbody>
+  ${mats.map((m,i)=>{
+    const prod = produtos.find(x=>String(x.id)===String(m.itemId));
+    const est = prod ? Number(prod.quantidade) : null;
+    const falta = est !== null ? Math.max(0, m.qty - est) : null;
+    let sit = est===null?'Manual':est>=m.qty?'✅ OK':est>0?`🟡 Falta ${falta}`:'🔴 Sem estoque';
+    return `<tr><td>${i+1}</td><td style="font-weight:600">${m.nome}</td>
+    <td style="text-align:center;font-weight:700">${m.qty} ${m.unidade}</td>
+    <td style="text-align:center;font-weight:700">${est!==null?est+' '+m.unidade:'—'}</td>
+    <td style="text-align:center;font-size:11px">${sit}</td>
     <td><span class="badge ${m.status==='separado'?'sep':m.status==='faltando'?'falt':m.status==='substituido'?'subs':'pend'}">${statusLabel[m.status||'pendente']}</span></td>
-    <td style="color:#6b7280">${m.obs||'—'}</td></tr>`).join('')}
+    <td style="color:#6b7280">${m.obs||'—'}</td></tr>`;}).join('')}
   ${!mats.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Nenhum material cadastrado.</td></tr>':''}
   </tbody></table>
   <div class="footer">Muda Paisagismo · OS gerada em ${new Date().toLocaleString('pt-BR')} · Por ${usuarioAtual?.nome||'—'}</div>
@@ -2573,7 +2640,7 @@ async function salvarModulo(){
   const desc = document.getElementById('mod-desc').value.trim();
   if(!nome) return showToast('Informe o nome do módulo.','err');
   const id = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-  if(modulos.find(m=>m.id===id)) return showToast('Módulo já existe!','err');
+  if(modulos.find(m=>String(m.id)===String(id))) return showToast('Módulo já existe!','err');
   
   showToast('Criando módulo e aba no Sheets...');
   
