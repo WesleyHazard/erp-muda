@@ -873,7 +873,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
           </div>
         </div>
         <div class="tipo-btns">
-          <button class="tipo-btn entrada" id="mov-tab-e" onclick="setMovTipo('entrada')">▲ Entrada</button>
+          <button class="tipo-btn entrada active" id="mov-tab-e" onclick="setMovTipo('entrada')">▲ Entrada</button>
           <button class="tipo-btn saida" id="mov-tab-s" onclick="setMovTipo('saida')">▼ Saída</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1441,6 +1441,7 @@ function switchTab(tab,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('sec-'+tab).classList.add('active');
   if(el)el.classList.add('active');
+  if(tab==='movimentacao')popularMovSels();
   if(tab==='historico')renderHistorico();
   if(tab==='reposicao')renderReposicao();
   if(tab==='projetos')renderProjetos();
