@@ -1876,6 +1876,12 @@ function filtrarItens(){
   const q = document.getElementById('mov-search').value.toLowerCase();
   const dd = document.getElementById('mov-drop');
   if(!q){ dd.classList.remove('open'); return; }
+  // Se produtos ainda não carregou, avisar
+  if(!produtos || produtos.length === 0){
+    dd.innerHTML = '<div class="idd-opt" style="color:#d97706">⏳ Carregando dados... aguarde um momento.</div>';
+    dd.classList.add('open');
+    return;
+  }
   const res = produtos.filter(p =>
     p.nome.toLowerCase().includes(q) ||
     (p.sku||'').toLowerCase().includes(q) ||
