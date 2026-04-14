@@ -78,7 +78,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .stat-sub{font-size:10px;color:#9ca3af;margin-top:2px}
 .card{background:#fff;border-radius:12px;padding:16px;border:1px solid #e5e7eb;margin-bottom:14px}
 .card-title{font-weight:700;font-size:14px;color:#14532d;margin-bottom:12px}
-.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;overflow:visible;position:relative;z-index:100}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;position:relative;z-index:200;overflow:visible}
 .sw{position:relative;flex:1;min-width:180px}
 .sw input{width:100%;padding:8px 12px 8px 32px;border:1.5px solid #d1d5db;border-radius:9px;font-size:13px;outline:none}
 .sw input:focus{border-color:#16a34a}
@@ -93,7 +93,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 .btn-qr{background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer}
 .count-lbl{font-size:12px;color:#6b7280;margin-bottom:8px}
 .col-toggle{position:relative;overflow:visible}
-.col-menu{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;z-index:99999;min-width:200px;box-shadow:0 4px 16px #0002;display:none}
+.col-menu{position:absolute;top:calc(100% + 4px);right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;z-index:9999;min-width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.15);display:none}
 .col-menu.open{display:block}
 .col-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;cursor:pointer}
 .form-box{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px;margin-bottom:14px}
@@ -778,7 +778,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     </select>
     <select class="sel" id="est-ord" onchange="renderEstoque()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="qty-asc">Qtd ↑</option><option value="qty-desc">Qtd ↓</option></select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick=\"toggleColMenu('col-est')\">⚙️ Colunas</button>
+      <button class="btn-gray" onclick="toggleColMenu('col-est')">⚙️ Colunas</button>
       <div class="col-menu" id="col-est">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="col-foto" checked onchange="renderEstoque()"> 📷 Foto</label>
@@ -901,7 +901,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <select class="sel" id="hist-ord" onchange="renderHistorico()" title="Ordenar"><option value="rec">Mais recente</option><option value="ant">Mais antigo</option><option value="az">A→Z</option></select>
     <select class="sel" id="hist-proj-f" onchange="renderHistorico()"><option value="">Todos projetos</option></select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick=\"toggleColMenu('col-hist')\">⚙️ Colunas</button>
+      <button class="btn-gray" onclick="toggleColMenu('col-hist')">⚙️ Colunas</button>
       <div class="col-menu" id="col-hist">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="hcol-data" checked onchange="renderHistorico()"> 📅 Data/Hora</label>
@@ -930,7 +930,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <option value="ferramentas">🛠️ Ferramentas</option>
     </select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick=\"toggleColMenu('col-rep')\">⚙️ Colunas</button>
+      <button class="btn-gray" onclick="toggleColMenu('col-rep')">⚙️ Colunas</button>
       <div class="col-menu" id="col-rep">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="rcol-forn" checked onchange="renderReposicao()"> 🏭 Fornecedor</label>
@@ -951,7 +951,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <select class="sel" id="proj-sf" onchange="renderProjetos()"><option value="">Todos</option><option value="ativo">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select>
     <select class="sel" id="proj-ord" onchange="renderProjetos()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="entrega">Entrega ↑</option></select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick=\"toggleColMenu('col-proj')\">⚙️ Colunas</button>
+      <button class="btn-gray" onclick="toggleColMenu('col-proj')">⚙️ Colunas</button>
       <div class="col-menu" id="col-proj">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="pcol-resp" checked onchange="renderProjetos()"> 🧑 Responsável</label>
@@ -978,7 +978,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <option value="ferramentas">🛠️ Ferramentas</option>
     </select>
     <div class="col-toggle">
-      <button class="btn-gray" onclick=\"toggleColMenu('col-forn')\">⚙️ Colunas</button>
+      <button class="btn-gray" onclick="toggleColMenu('col-forn')">⚙️ Colunas</button>
       <div class="col-menu" id="col-forn">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
         <label class="col-item"><input type="checkbox" id="fcol-tel" checked onchange="renderFornecedores()"> 📞 Telefone</label>
