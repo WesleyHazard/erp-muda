@@ -386,9 +386,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 <div class="modal" style="max-width:640px">
   <div class="modal-header"><div class="modal-title" id="mp-title">Novo Projeto</div><button class="modal-close" onclick="fecharModal('modal-proj')">×</button></div>
   <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
-    <div class="fg"><label>Nome do Projeto *</label><input type="text" id="mp-nome"></div>
+    <div class="fg"><label>Número do Projeto *</label><input type="text" id="mp-nome" placeholder="ex: 2106"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="fg"><label>Cliente *</label><input type="text" id="mp-cliente"></div>
+      <div class="fg"><label>Nome do Cliente *</label><input type="text" id="mp-cliente"></div>
       <div class="fg"><label>Responsável</label><input type="text" id="mp-resp"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -2065,7 +2065,7 @@ function renderProjetos(){
   const showObs=document.getElementById('pcol-obs')?.checked!==false;
   const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;
   const ord=document.getElementById('proj-ord')?.value||'az';
-  const fil=projetos.filter(p=>(!sf||p.status===sf)&&(p.nome.toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));
+  const fil=projetos.filter(p=>(!sf||p.status===sf)&&(String(p.nome||'').toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));
   fil.sort((a,b)=>{
     if(ord==='az') return a.nome.localeCompare(b.nome,'pt-BR');
     if(ord==='za') return b.nome.localeCompare(a.nome,'pt-BR');
@@ -2183,7 +2183,7 @@ function toISODate(d){
 async function salvarProjeto(){
   const nome=document.getElementById('mp-nome').value.trim();
   const cliente=document.getElementById('mp-cliente').value.trim();
-  if(!nome||!cliente)return showToast('Preencha nome e cliente.','err');
+  if(!nome||!cliente)return showToast('Preencha número do projeto e nome do cliente.','err');
   const existing=editProjId?projetos.find(x=>String(x.id)===String(editProjId)):null;
   // Merge mpMateriais with existing (preserve status/debitado from existing)
   const materiaisFinais = mpMateriais.map(m=>{
