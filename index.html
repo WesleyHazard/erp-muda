@@ -947,16 +947,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 <!-- PROJETOS -->
 <div class="section" id="sec-projetos">
   <div class="toolbar">
-    <div class="sw"><span class="sw-icon">🔍</span><input id="proj-search" placeholder="Buscar projeto..." oninput="renderProjetos()"></div>
+    <div class="sw"><span class="sw-icon">🔍</span><input id="proj-search" placeholder="Buscar por número, cliente ou data (ex: 23/04/2026)..." oninput="renderProjetos()"></div>
     <select class="sel" id="proj-sf" onchange="renderProjetos()"><option value="">Todos</option><option value="ativo">Em andamento</option><option value="concluido">Concluído</option><option value="pausado">Pausado</option></select>
-    <select class="sel" id="proj-ord" onchange="renderProjetos()" title="Ordenar"><option value="az">A→Z</option><option value="za">Z→A</option><option value="entrega">Entrega ↑</option></select>
+    <select class="sel" id="proj-ord" onchange="renderProjetos()" title="Ordenar">
+      <option value="entrega">🚚 Entrega mais próxima</option>
+      <option value="az">A→Z</option>
+      <option value="za">Z→A</option>
+      <option value="criacao">📅 Mais recente</option>
+    </select>
     <div class="col-toggle">
       <button class="btn-gray" onclick="toggleColMenu('col-proj')">⚙️ Colunas</button>
       <div class="col-menu" id="col-proj">
         <div style="font-weight:700;font-size:12px;margin-bottom:8px">Colunas visíveis:</div>
+        <label class="col-item"><input type="checkbox" id="pcol-cliente" checked onchange="renderProjetos()"> 👤 Cliente</label>
+        <label class="col-item"><input type="checkbox" id="pcol-datas" checked onchange="renderProjetos()"> 📅 Datas</label>
         <label class="col-item"><input type="checkbox" id="pcol-resp" checked onchange="renderProjetos()"> 🧑 Responsável</label>
-        <label class="col-item"><input type="checkbox" id="pcol-obs" checked onchange="renderProjetos()"> 📝 Observações</label>
-        <label class="col-item"><input type="checkbox" id="pcol-saidas" checked onchange="renderProjetos()"> 📦 Saídas</label>
+        <label class="col-item"><input type="checkbox" id="pcol-progresso" checked onchange="renderProjetos()"> 📊 Progresso</label>
+        <label class="col-item"><input type="checkbox" id="pcol-obs" onchange="renderProjetos()"> 📝 Observações</label>
       </div>
     </div>
     <button class="btn-green" id="btn-novo-proj" onclick="abrirModalProj()">+ Novo Projeto</button>
@@ -2058,18 +2065,41 @@ function renderHistorico(){
 function renderReposicao(){const q=document.getElementById('rep-search')?.value.toLowerCase()||'';const cat=document.getElementById('rep-cat')?.value||'';const showForn=document.getElementById('rcol-forn')?.checked!==false;const showLoc=document.getElementById('rcol-loc')?.checked!==false;const showFalta=document.getElementById('rcol-falta')?.checked!==false;const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo)&&(!cat||p.categoria===cat)&&(p.nome.toLowerCase().includes(q)));document.getElementById('lista-reposicao').innerHTML=baixo.length?baixo.map(p=>`<div class="repos-item"><div><div style="font-weight:600;font-size:13px">${p.nome}</div><div style="font-size:11px;color:#9ca3af">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}${showForn&&p.fornecedor?' · 🏭 '+p.fornecedor:''} ${showLoc&&p.localizacao?'· 📍 '+p.localizacao:''}</div></div><div style="text-align:right"><div style="font-weight:700;color:#dc2626">Saldo: ${p.quantidade} ${p.unidade}</div>${showFalta?`<div style="font-size:11px;color:#9ca3af">Mín: ${p.estoqueMinimo} · Falta: ~${Math.max(0,Number(p.estoqueMinimo)-Number(p.quantidade))}</div>`:''}</div></div>`).join(''):'<div class="empty">✅ Nenhum item precisa de reposição!</div>';}
 function exportarReposicao(){const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));if(!baixo.length)return showToast('Nenhum item para repor!');const txt='🌿 LISTA DE REPOSIÇÃO — MUDA PAISAGISMO\n📅 '+new Date().toLocaleDateString('pt-BR')+'\n\n'+baixo.map((p,i)=>`${i+1}. ${p.nome}\n   Saldo: ${p.quantidade} ${p.unidade} | Mínimo: ${p.estoqueMinimo}${p.fornecedor?'\n   Fornecedor: '+p.fornecedor:''}`).join('\n\n');navigator.clipboard.writeText(txt).then(()=>showToast('Lista copiada! ✅'));}
 
+function fmtDataStr(d){
+  if(!d) return '';
+  try{
+    const s=String(d).trim();
+    if(/^\d{2}\/\d{2}\/\d{4}/.test(s)) return s.substring(0,10);
+    if(/^\d{4}-\d{2}-\d{2}/.test(s)){const [y,m,day]=s.substring(0,10).split('-');return `${day}/${m}/${y}`;}
+    const dt=new Date(s);
+    if(!isNaN(dt.getTime())) return dt.toLocaleDateString('pt-BR');
+    return s;
+  }catch(e){return '';}
+}
 function renderProjetos(){
   const q=document.getElementById('proj-search').value.toLowerCase();
   const sf=document.getElementById('proj-sf').value;
+  const showCliente=document.getElementById('pcol-cliente')?.checked!==false;
+  const showDatas=document.getElementById('pcol-datas')?.checked!==false;
   const showResp=document.getElementById('pcol-resp')?.checked!==false;
-  const showObs=document.getElementById('pcol-obs')?.checked!==false;
-  const showSaidas=document.getElementById('pcol-saidas')?.checked!==false;
-  const ord=document.getElementById('proj-ord')?.value||'az';
-  const fil=projetos.filter(p=>(!sf||p.status===sf)&&(String(p.nome||'').toLowerCase().includes(q)||(p.cliente||'').toLowerCase().includes(q)));
+  const showProgresso=document.getElementById('pcol-progresso')?.checked!==false;
+  const showObs=document.getElementById('pcol-obs')?.checked===true;
+  const ord=document.getElementById('proj-ord')?.value||'entrega';
+  const fil=projetos.filter(p=>{
+    if(sf&&p.status!==sf) return false;
+    if(!q) return true;
+    // Busca por número, cliente, data de entrega ou data de início
+    return String(p.nome||'').toLowerCase().includes(q) ||
+           (p.cliente||'').toLowerCase().includes(q) ||
+           (p.dataEntrega?fmtDataStr(p.dataEntrega):'').includes(q) ||
+           (p.dataInicio?fmtDataStr(p.dataInicio):'').includes(q);
+  });
   fil.sort((a,b)=>{
     if(ord==='az') return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
     if(ord==='za') return String(b.nome||'').localeCompare(String(a.nome||''),'pt-BR');
+    if(ord==='criacao') return Number(b.id||0)-Number(a.id||0);
     if(ord==='entrega'){
+      if(!a.dataEntrega&&!b.dataEntrega) return 0;
       if(!a.dataEntrega) return 1; if(!b.dataEntrega) return -1;
       return new Date(toISODate(a.dataEntrega)) - new Date(toISODate(b.dataEntrega));
     }
@@ -2108,14 +2138,14 @@ function renderProjetos(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
         <div style="flex:1">
           <div style="font-weight:700;font-size:15px">${p.nome}</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:3px">
+          ${showCliente?`<div style="font-size:12px;color:#6b7280;margin-top:3px">
             👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}
             ${p.responsavelSep?` · 👷 ${p.responsavelSep}`:''}
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          </div>`:''}
+          ${showDatas?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
             ${p.dataInicio?`<span class="data-badge">📅 ${fmtData(p.dataInicio)}</span>`:''}
             ${p.dataEntrega?`<span class="data-badge ${vencendo?'vence':''}">🚚 ${fmtData(p.dataEntrega)}${vencendo?' ⚠️':''}</span>`:''}
-          </div>
+          </div>`:''}
         </div>
         <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
           <span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>
@@ -2126,7 +2156,7 @@ function renderProjetos(){
         </div>
       </div>
       ${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}
-      ${mats.length>0?`<div style="margin-top:10px">
+      ${showProgresso&&mats.length>0?`<div style="margin-top:10px">
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:4px">
           <span>📦 ${sepCount}/${mats.length} separados ${faltCount>0?`· <span style="color:#dc2626;font-weight:700">❌ ${faltCount} faltando</span>`:''}</span>
           <span style="font-weight:700;color:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}">${pct}%</span>
