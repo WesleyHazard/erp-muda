@@ -2696,7 +2696,7 @@ async function zerarEstoque(){
   if(progDiv){ progDiv.style.display='block'; progBarra.style.background='#dc2626'; }
   if(btnConfirmar) btnConfirmar.disabled=true;
 
-  const LOTE=5;
+  const LOTE=8;
   let ok=0, err=0;
   const total=itenComQtd.length;
 
@@ -2712,17 +2712,20 @@ async function zerarEstoque(){
     const lote=itenComQtd.slice(i,i+LOTE);
     await Promise.all(lote.map(async p=>{
       try{
-        await api({action:'editProduto',id:p.id,
-          nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
-          categoria:p.categoria,quantidade:0,unidade:p.unidade,
-          estoqueMinimo:p.estoqueMinimo||0,estoqueMaximo:p.estoqueMaximo||0,
-          fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',
-          observacoes:p.observacoes||'',foto:p.foto||'',
-          codigoInterno:p.codigoInterno||getCodigo(p)});
-        await api({action:'addMovimentacao',itemId:p.id,itemNome:p.nome,
-          tipo:'saida',quantidade:Number(p.quantidade),
-          motivo:'Zeramento de estoque',responsavel:resp,
-          projeto:'—',obs:'Zeramento total do estoque'});
+        // Dispara as duas chamadas em paralelo em vez de sequencial
+        await Promise.all([
+          api({action:'editProduto',id:p.id,
+            nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
+            categoria:p.categoria,quantidade:0,unidade:p.unidade,
+            estoqueMinimo:p.estoqueMinimo||0,estoqueMaximo:p.estoqueMaximo||0,
+            fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',
+            observacoes:p.observacoes||'',foto:p.foto||'',
+            codigoInterno:p.codigoInterno||getCodigo(p)}),
+          api({action:'addMovimentacao',itemId:p.id,itemNome:p.nome,
+            tipo:'saida',quantidade:Number(p.quantidade),
+            motivo:'Zeramento de estoque',responsavel:resp,
+            projeto:'—',obs:'Zeramento total do estoque'})
+        ]);
         ok++;
       }catch(e){ err++; }
     }));
@@ -2773,7 +2776,7 @@ async function confirmarInventario(){
   if(btnConfirmar) btnConfirmar.disabled=true;
 
 
-  const LOTE=5;
+  const LOTE=8;
   let ok=0,err=0;
   const total=lista.length;
 
@@ -2790,17 +2793,20 @@ async function confirmarInventario(){
     const lote=lista.slice(i,i+LOTE);
     await Promise.all(lote.map(async ({p,id,novaQty,diff})=>{
       try{
-        await api({action:'editProduto',id,
-          nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
-          categoria:p.categoria,quantidade:novaQty,unidade:p.unidade,
-          estoqueMinimo:p.estoqueMinimo||0,estoqueMaximo:p.estoqueMaximo||0,
-          fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',
-          observacoes:p.observacoes||'',foto:p.foto||'',
-          codigoInterno:p.codigoInterno||getCodigo(p)});
-        await api({action:'addMovimentacao',itemId:id,itemNome:p.nome,
-          tipo:diff>0?'entrada':'saida',quantidade:Math.abs(diff),
-          motivo:'Inventário inicial',responsavel:resp,
-          projeto:'—',obs:'Ajuste de inventário inicial'});
+        // Dispara as duas chamadas em paralelo
+        await Promise.all([
+          api({action:'editProduto',id,
+            nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
+            categoria:p.categoria,quantidade:novaQty,unidade:p.unidade,
+            estoqueMinimo:p.estoqueMinimo||0,estoqueMaximo:p.estoqueMaximo||0,
+            fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',
+            observacoes:p.observacoes||'',foto:p.foto||'',
+            codigoInterno:p.codigoInterno||getCodigo(p)}),
+          api({action:'addMovimentacao',itemId:id,itemNome:p.nome,
+            tipo:diff>0?'entrada':'saida',quantidade:Math.abs(diff),
+            motivo:'Inventário inicial',responsavel:resp,
+            projeto:'—',obs:'Ajuste de inventário inicial'})
+        ]);
         ok++;
       }catch(e){ err++; }
     }));
