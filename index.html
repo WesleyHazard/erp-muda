@@ -2672,26 +2672,48 @@ async function confirmarInventario(){
   const itensParaAtualizar=Object.entries(inventarioContagens).filter(([id,qty])=>qty!==undefined&&qty!=='');
   if(!itensParaAtualizar.length)return showToast('Nenhuma quantidade informada.','err');
   if(!confirm(`Confirmar inventário inicial para ${itensParaAtualizar.length} item(ns)? Isso registrará entradas no histórico.`))return;
-  showToast('Processando...');
-  let ok=0,err=0;
+
+  // Montar lista de itens que realmente mudaram
+  const lista=[];
   for(const [id,novaQty] of itensParaAtualizar){
     const p=produtos.find(x=>String(x.id)===String(id));
     if(!p)continue;
     const diff=Number(novaQty)-Number(p.quantidade);
     if(diff===0)continue;
-    try{
-      await api({action:'addMovimentacao',itemId:id,itemNome:p.nome,tipo:diff>0?'entrada':'saida',
-        quantidade:Math.abs(diff),motivo:'Inventário inicial',responsavel:resp,
-        projeto:'—',obs:'Ajuste de inventário inicial',codigoInterno:p.codigoInterno||getCodigo(p)});
-      await api({action:'editProduto',id,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
-        categoria:p.categoria,quantidade:Number(novaQty),unidade:p.unidade,
-        estoqueMinimo:p.estoqueMinimo||0,estoqueMaximo:p.estoqueMaximo||0,
-        fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',
-        observacoes:p.observacoes||'',foto:p.foto||'',codigoInterno:p.codigoInterno||getCodigo(p)});
-      ok++;
-    }catch{err++;}
+    lista.push({p, id, novaQty:Number(novaQty), diff});
   }
-  showToast(`✅ ${ok} item(ns) atualizados${err?` · ${err} erro(s)`:''}.`);
+
+  if(!lista.length)return showToast('Nenhum item com quantidade diferente do saldo atual.');
+
+  const LOTE=8; // processa 8 itens em paralelo por vez
+  let ok=0, err=0;
+  const total=lista.length;
+
+  for(let i=0;i<lista.length;i+=LOTE){
+    const lote=lista.slice(i,i+LOTE);
+    showToast(`⏳ Processando... ${Math.min(i+LOTE,total)} de ${total}`);
+
+    await Promise.all(lote.map(async ({p,id,novaQty,diff})=>{
+      try{
+        // Atualiza quantidade do produto
+        await api({action:'editProduto',id,
+          nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
+          categoria:p.categoria,quantidade:novaQty,unidade:p.unidade,
+          estoqueMinimo:p.estoqueMinimo||0,estoqueMaximo:p.estoqueMaximo||0,
+          fornecedor:p.fornecedor||'',custo:p.custo||0,descricao:p.descricao||'',
+          observacoes:p.observacoes||'',foto:p.foto||'',
+          codigoInterno:p.codigoInterno||getCodigo(p)});
+        // Registra no histórico
+        await api({action:'addMovimentacao',itemId:id,itemNome:p.nome,
+          tipo:diff>0?'entrada':'saida',quantidade:Math.abs(diff),
+          motivo:'Inventário inicial',responsavel:resp,
+          projeto:'—',obs:'Ajuste de inventário inicial'});
+        ok++;
+      }catch(e){ err++; }
+    }));
+  }
+
+  showToast(`✅ ${ok} item(ns) atualizados${err?` · ${err} com erro`:''}.`);
   inventarioContagens={};
   await carregarDados();
   renderInventario();
