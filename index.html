@@ -1411,7 +1411,8 @@ let CATS={
   ferramentas:{label:'Ferramentas e Equip.',icon:'🛠️',prefix:'FER',cor:'#475569'}
 };
 // Motivos dinâmicos - carregados via carregarCategorias()
-let activityLog=[];
+let motivosEntrada = ['Compra/Reposição','Devolução','Transferência','Inventário inicial','Outro'];
+let motivosSaida = ['Projeto de cliente','Manutenção','Descarte','Transferência','Outro'];
 let produtos=[],historico=[],projetos=[],fornecedores=[],notificacoes=[];
 let editItemId=null,editFornId=null,editProjId=null,editUsuId=null;
 let movItemModal=null,movTipoModal='entrada',movItemTab=null,movTipoTab='entrada';
@@ -1536,8 +1537,7 @@ function aplicarPermissoes(){
   const nv=NIVEIS[usuarioAtual.nivel];
   ['btn-novo-item','btn-novo-proj','btn-novo-forn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=nv.cadastrar?'':'none';});
   if(usuarioAtual.nivel==='visualizador'){
-    const abasOcultas=['tab-dash','tab-mov','tab-hist','tab-rep','tab-proj','tab-forn','tab-rel','tab-config','tab-man'];
-    abasOcultas.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+    ['tab-dash','tab-mov','tab-hist','tab-rep','tab-proj','tab-forn','tab-rel','tab-config','tab-man'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
     switchTab('estoque', document.getElementById('tab-est'));
   }
   if(usuarioAtual.nivel!=='admin')document.getElementById('tab-config').style.display='none';
@@ -2008,7 +2008,7 @@ async function salvarItem(){
 }
 
 async function setTipo(t){movTipoModal=t;document.getElementById('mm-btn-e').className='tipo-btn entrada'+(t==='entrada'?' active':'');document.getElementById('mm-btn-s').className='tipo-btn saida'+(t==='saida'?' active':'');const s=document.getElementById('mm-motivo');s.innerHTML='<option value="">Selecione...</option>';(t==='entrada'?motivosEntrada:motivosSaida).forEach(m=>s.innerHTML+=`<option>${m}</option>`);}
-asasync functioniltrarItens(){
+async function filtrarItens(){
   const q = document.getElementById('mov-search').value.toLowerCase();
   const dd = document.getElementById('mov-drop');
   if(!q){ dd.classList.remove('open'); return; }
@@ -2868,7 +2868,7 @@ function renderRelMovPeriodo(){
   const respBusca=(document.getElementById('rp-resp-busca')?.value||'').toLowerCase();
   const de=deStr?new Date(deStr+'T00:00:00'):null;
   const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
-  const fil=historico.filter(h=>{
+  let fil=historico.filter(h=>{
     if(tipo&&h.tipo!==tipo)return false;
     if(itemBusca&&!(h.itemNome||'').toLowerCase().includes(itemBusca))return false;
     if(respBusca&&!(h.responsavel||'').toLowerCase().includes(respBusca))return false;
@@ -2908,6 +2908,7 @@ function gerarConteudoImpressao(id){
 }
 
 // ===================== LOG DE ATIVIDADES =====================
+let activityLog = [];
 
 function registrarLog(tipo, msg, icon='📌'){
   const entry = {
@@ -3316,8 +3317,7 @@ function imprimirOS(){
 
 // ===================== CONFIGURAÇÕES =====================
 let editCatId = null;
-let motivosEntrada = ['Compra/Reposição','Devolução','Transferência','Inventário inicial','Outro'];
-let motivosSaida = ['Projeto de cliente','Manutenção','Descarte','Transferência','Outro'];
+
 
 function initConfiguracoes(){
   carregarCategorias();
@@ -4007,7 +4007,6 @@ function confirmarAddMatProjeto(){
   else if(estoque > 0){ disponivel = '🟡'; status = 'parcial'; }
   else { disponivel = '🔴'; status = 'falta'; }
 
-  // Verifica se item já existe na OS — soma quantidade
   const existente = mpMateriais.find(m => String(m.itemId) === String(mpMatSelecionado.id));
   if(existente){
     existente.qty += qty;
