@@ -1044,6 +1044,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div class="card-title" style="margin:0">💰 Valor por Item e Categoria</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" class="sel" id="rv-busca" placeholder="🔍 Buscar item..." oninput="renderRelValor()" style="min-width:180px">
           <select class="sel" id="rv-cat" onchange="renderRelValor()">
             <option value="">Todas categorias</option>
             <option value="plantas_naturais">🌿 Plantas Naturais</option>
@@ -1069,6 +1070,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div class="card-title" style="margin:0">📋 Lista para Auditoria</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" class="sel" id="ra-busca" placeholder="🔍 Buscar item..." oninput="renderRelAuditoria()" style="min-width:180px">
           <select class="sel" id="ra-cat" onchange="renderRelAuditoria()">
             <option value="">Todas categorias</option>
             <option value="plantas_naturais">🌿 Plantas Naturais</option>
@@ -1130,6 +1132,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <div class="card-title" style="margin:0">😴 Itens Parados</div>
         <div style="display:flex;gap:8px">
+          <input type="text" class="sel" id="rpar-busca" placeholder="🔍 Buscar item..." oninput="renderRelParados()" style="min-width:180px">
           <select class="sel" id="rpar-dias" onchange="renderRelParados()">
             <option value="30">+30 dias</option><option value="60">+60 dias</option><option value="90">+90 dias</option><option value="180">+180 dias</option>
           </select>
@@ -1154,6 +1157,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <input type="date" class="sel" id="rg-de" onchange="renderRelGeral()">
         <input type="date" class="sel" id="rg-ate" onchange="renderRelGeral()">
+        <input type="text" class="sel" id="rg-busca" placeholder="🔍 Buscar item..." oninput="renderRelGeral()" style="min-width:180px">
         <select class="sel" id="rg-tipo" onchange="renderRelGeral()">
           <option value="">Entradas e Saídas</option>
           <option value="entrada">▲ Apenas Entradas</option>
@@ -1176,6 +1180,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <button class="btn-green" onclick="imprimirRelatorio('rel-porprojeto-print')">🖨️ Imprimir / PDF</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <input type="text" class="sel" id="rpp-busca" placeholder="🔍 Buscar item..." oninput="renderRelPorProjeto()" style="min-width:180px">
         <select class="sel" id="rpp-proj" onchange="renderRelPorProjeto()" style="min-width:200px">
           <option value="">Todos os projetos</option>
         </select>
@@ -2180,11 +2185,12 @@ function renderHistorico(){
   const ord=document.getElementById('hist-ord')?.value||'rec';
   const fil=historico.filter(h=>(!t||h.tipo===t)&&(!pf||h.projeto===pf)&&(h.itemNome.toLowerCase().includes(q)||(h.responsavel||'').toLowerCase().includes(q)||(h.projeto||'').toLowerCase().includes(q)));
   fil.sort((a,b)=>{
-    if(ord==='az') return a.itemNome.localeCompare(b.itemNome,'pt-BR');
-    if(ord==='ant') return 0; // already oldest first if needed
+    if(ord==='az') return String(a.itemNome||'').localeCompare(String(b.itemNome||''),'pt-BR');
+    if(ord==='za') return String(b.itemNome||'').localeCompare(String(a.itemNome||''),'pt-BR');
     const da=parseDateBR(a.data)||new Date(0);
     const db=parseDateBR(b.data)||new Date(0);
-    return db-da;
+    if(ord==='ant') return da-db;
+    return db-da; // padrão: mais recente primeiro
   });
   document.getElementById('hist-count').textContent=fil.length+' registro'+(fil.length!==1?'s':'');
   const showData=document.getElementById('hcol-data')?.checked!==false;const showResp=document.getElementById('hcol-resp')?.checked!==false;const showProj=document.getElementById('hcol-proj')?.checked!==false;const showMotivo=document.getElementById('hcol-motivo')?.checked!==false;const showObs=document.getElementById('hcol-obs')?.checked!==false;
@@ -2513,7 +2519,24 @@ function fecharModal(id){document.getElementById(id).classList.remove('open');}
 // RELATÓRIOS
 function fmt(n){return Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtN(n){return Number(n||0).toLocaleString('pt-BR');}
-function parseDateBR(str){try{if(!str)return null;if(str.includes('-')&&str.length===10)return new Date(str+'T00:00:00');const partes=str.split(',')[0].trim().split('/');if(partes.length===3)return new Date(Number(partes[2]),Number(partes[1])-1,Number(partes[0]));return null;}catch{return null;}}
+function parseDateBR(str){
+  try{
+    if(!str)return null;
+    // Formato ISO com T
+    if(str.includes('T'))return new Date(str);
+    // Formato ISO puro: 2026-05-13
+    if(str.includes('-')&&str.substring(0,4).match(/\d{4}/))return new Date(str.substring(0,10)+'T00:00:00');
+    // Formato BR: "13/05/2026 15:19:00" ou "13/05/2026, 15:19"
+    const parteData=str.split(',')[0].trim().split(' ')[0]; // pega só "13/05/2026"
+    const partes=parteData.split('/');
+    if(partes.length===3){
+      const hora=str.split(' ')[1]||'00:00';
+      const [h,m]=(hora.replace(',','').trim()).split(':');
+      return new Date(Number(partes[2]),Number(partes[1])-1,Number(partes[0]),Number(h)||0,Number(m)||0);
+    }
+    return null;
+  }catch{return null;}
+}
 function formatarDataLegivel(str){
   if(!str||str==='—')return'—';
   try{
@@ -2547,10 +2570,12 @@ function renderRelGeral(){
   const deStr=document.getElementById('rg-de')?.value;
   const ateStr=document.getElementById('rg-ate')?.value;
   const tipo=document.getElementById('rg-tipo')?.value||'';
+  const buscaG=(document.getElementById('rg-busca')?.value||'').toLowerCase();
   const de=deStr?new Date(deStr+'T00:00:00'):null;
   const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
   const fil=historico.filter(h=>{
     if(tipo&&h.tipo!==tipo)return false;
+    if(buscaG&&!(h.itemNome||'').toLowerCase().includes(buscaG))return false;
     const d=parseDateBR(h.data)||new Date(h.data);
     if(de&&d<de)return false;
     if(ate&&d>ate)return false;
@@ -2589,6 +2614,7 @@ function renderRelPorProjeto(){
     if(curr)rpp.value=curr;
   }
   const proj=document.getElementById('rpp-proj')?.value||'';
+  const buscaPP=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
   const deStr=document.getElementById('rpp-de')?.value;
   const ateStr=document.getElementById('rpp-ate')?.value;
   const de=deStr?new Date(deStr+'T00:00:00'):null;
@@ -2596,6 +2622,7 @@ function renderRelPorProjeto(){
   const fil=historico.filter(h=>{
     if(h.tipo!=='saida')return false;
     if(proj&&h.projeto!==proj)return false;
+    if(buscaPP&&!(h.itemNome||'').toLowerCase().includes(buscaPP))return false;
     if(!h.projeto||h.projeto==='—')return false;
     const d=parseDateBR(h.data)||new Date(h.data);
     if(de&&d<de)return false;
@@ -2843,7 +2870,9 @@ function initRelatorios(){
 }
 
 function renderRelValor(){
-  const cat=document.getElementById('rv-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat);
+  const cat=document.getElementById('rv-cat')?.value||'';
+  const busca=(document.getElementById('rv-busca')?.value||'').toLowerCase();
+  const fil=produtos.filter(p=>(!cat||p.categoria===cat)&&(!busca||p.nome.toLowerCase().includes(busca)));
   const totalValor=fil.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);const semCusto=fil.filter(p=>!Number(p.custo)).length;
   document.getElementById('rv-summary').innerHTML=`<div class="rel-sum-card"><div class="rel-sum-label">Total de Itens</div><div class="rel-sum-val">${fil.length}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Valor Total</div><div class="rel-sum-val" style="color:#ca8a04;font-size:16px">R$ ${fmt(totalValor)}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Sem Custo</div><div class="rel-sum-val" style="color:${semCusto>0?'#dc2626':'#16a34a'}">${semCusto}</div></div>`;
   const porCat={};fil.forEach(p=>{const c=p.categoria||'outros';if(!porCat[c])porCat[c]={label:CATS[c]?.label||c,icon:CATS[c]?.icon||'📦',itens:[],valor:0};porCat[c].itens.push(p);porCat[c].valor+=Number(p.custo||0)*Number(p.quantidade||0);});
@@ -2854,7 +2883,9 @@ function renderRelValor(){
 }
 
 function renderRelAuditoria(){
-  const cat=document.getElementById('ra-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||'')));
+  const cat=document.getElementById('ra-cat')?.value||'';
+  const busca=(document.getElementById('ra-busca')?.value||'').toLowerCase();
+  const fil=produtos.filter(p=>(!cat||p.categoria===cat)&&(!busca||p.nome.toLowerCase().includes(busca))).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||'')));
   document.getElementById('ra-body').innerHTML=fil.map(p=>{const cod=getCodigo(p);const cont=auditoriaContagens[p.id]||{qty:'',obs:''};const diff=cont.qty!==''?(Number(cont.qty)-Number(p.quantidade)):'';const diffStr=diff===''?'—':(diff>0?`<span style="color:#16a34a;font-weight:700">+${diff}</span>`:diff<0?`<span style="color:#dc2626;font-weight:700">${diff}</span>`:`<span style="color:#6b7280">0</span>`);return `<tr><td><span class="ic-code">${cod}</span></td><td style="font-weight:600">${p.nome}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td>${p.unidade}</td><td class="num" style="font-weight:700">${p.quantidade}</td><td class="num"><input class="audit-input" type="number" placeholder="—" value="${cont.qty}" oninput="atualizarAuditoria('${p.id}','qty',this.value)"></td><td class="num">${diffStr}</td><td><input type="text" style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:11px" placeholder="Obs..." value="${cont.obs||''}" oninput="atualizarAuditoria('${p.id}','obs',this.value)"></td></tr>`;}).join('')||'<tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:24px">Nenhum item.</td></tr>';
 }
 function atualizarAuditoria(id,campo,val){if(!auditoriaContagens[id])auditoriaContagens[id]={qty:'',obs:''};auditoriaContagens[id][campo]=val;if(campo!=='qty')return;const tr=event.target.closest('tr');const p=produtos.find(x=>String(x.id)===String(id));if(!tr||!p)return;const diff=val!==''?(Number(val)-Number(p.quantidade)):'';const dc=tr.cells[6];if(diff==='')dc.innerHTML='—';else if(diff>0)dc.innerHTML=`<span style="color:#16a34a;font-weight:700">+${diff}</span>`;else if(diff<0)dc.innerHTML=`<span style="color:#dc2626;font-weight:700">${diff}</span>`;else dc.innerHTML=`<span style="color:#6b7280">0</span>`;}
@@ -2884,7 +2915,8 @@ function renderRelMovPeriodo(){
 }
 
 function renderRelParados(){
-  const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();
+  const dias=Number(document.getElementById('rpar-dias')?.value||30);
+  const buscaPar=(document.getElementById('rpar-busca')?.value||'').toLowerCase();const hoje=new Date();
   const itensParados=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let diasParado=null;let ultimaDataStr='Nunca movimentado';if(movs.length){const ultima=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});ultimaDataStr=ultima.data||'—';const ud=parseDateBR(ultima.data);if(ud)diasParado=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,diasParado,ultimaDataStr};}).filter(p=>p.diasParado===null||p.diasParado>=dias).sort((a,b)=>(b.diasParado||9999)-(a.diasParado||9999));
   const valorParado=itensParados.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);
   document.getElementById('rpar-summary').innerHTML=`<div class="rel-sum-card"><div class="rel-sum-label">Itens Parados (+${dias}d)</div><div class="rel-sum-val" style="color:#dc2626">${itensParados.length}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Valor Parado</div><div class="rel-sum-val" style="color:#ca8a04;font-size:16px">R$ ${fmt(valorParado)}</div></div>`;
@@ -2903,7 +2935,7 @@ function gerarConteudoImpressao(id){
   if(id==='rel-valor'){const cat=document.getElementById('rv-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat);const tv=fil.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);const sc=fil.filter(p=>!Number(p.custo)).length;const pc={};fil.forEach(p=>{const c=p.categoria||'outros';if(!pc[c])pc[c]={label:CATS[c]?.label||c,icon:CATS[c]?.icon||'📦',itens:[],valor:0};pc[c].itens.push(p);pc[c].valor+=Number(p.custo||0)*Number(p.quantidade||0);});let h=`<div class="sumary"><div class="sc"><div class="sl">Itens</div><div class="sv">${fil.length}</div></div><div class="sc"><div class="sl">Valor Total</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(tv)}</div></div><div class="sc"><div class="sl">Sem Custo</div><div class="sv" style="color:${sc>0?'#dc2626':'#16a34a'}">${sc}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Un.</th><th class="num">Qtd.</th><th class="num">Custo Unit.</th><th class="num">Valor Total</th></tr></thead><tbody>`;Object.entries(pc).forEach(([ci,g])=>{h+=`<tr style="background:#f0fdf4"><td colspan="6" style="font-weight:800;color:#14532d;padding:8px 10px">${g.icon} ${g.label} — R$ ${fmt(g.valor)}</td></tr>`;g.itens.forEach(p=>{const v=Number(p.custo||0)*Number(p.quantidade||0);h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.label||p.categoria}</td><td>${p.unidade}</td><td class="num">${fmtN(p.quantidade)}</td><td class="num">${Number(p.custo)>0?'R$ '+fmt(p.custo):'—'}</td><td class="num">${v>0?'R$ '+fmt(v):'—'}</td></tr>`;});});h+=`</tbody><tfoot><tr><td colspan="3" style="padding:8px 10px">TOTAL GERAL</td><td></td><td></td><td class="num">R$ ${fmt(tv)}</td></tr></tfoot></table>`;return h;}
   if(id==='rel-auditoria'){const cat=document.getElementById('ra-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||'')));let h=`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:12px">📋 Preencha a coluna "Contagem Física" durante a conferência.</div><table><thead><tr><th>Código</th><th>Item</th><th>Localização</th><th>Un.</th><th class="num">Qtd. Sistema</th><th class="num">Contagem</th><th class="num">Diferença</th><th>Obs.</th></tr></thead><tbody>`;fil.forEach(p=>{const cod=getCodigo(p);const cont=auditoriaContagens[p.id]||{qty:'',obs:''};const diff=cont.qty!==''?(Number(cont.qty)-Number(p.quantidade)):'';const ds=diff===''?'___':(diff>0?`<span style="color:#16a34a;font-weight:700">+${diff}</span>`:diff<0?`<span style="color:#dc2626;font-weight:700">${diff}</span>`:'0');h+=`<tr><td style="font-size:11px;color:#16a34a;font-weight:700">${cod}</td><td>${p.nome}</td><td style="color:#7c3aed;font-size:11px">${p.localizacao||'—'}</td><td>${p.unidade}</td><td class="num" style="font-weight:700">${p.quantidade}</td><td class="num">${cont.qty||'___'}</td><td class="num">${ds}</td><td style="font-size:11px">${cont.obs||'___'}</td></tr>`;});h+=`</tbody></table><div style="margin-top:12px;font-size:11px;color:#6b7280">Total: ${fil.length} itens · Data: ___/___/______ · Responsável: _______________________</div>`;return h;}
   if(id==='rel-movperiodo'){const deStr=document.getElementById('rp-de')?.value;const ateStr=document.getElementById('rp-ate')?.value;const tipo=document.getElementById('rp-tipo')?.value||'';const proj=document.getElementById('rp-proj')?.value||'';const de=deStr?new Date(deStr+'T00:00:00'):null;const ate=ateStr?new Date(ateStr+'T23:59:59'):null;const fil=historico.filter(h=>{if(tipo&&h.tipo!==tipo)return false;if(proj&&h.projeto!==proj)return false;const d=parseDateBR(h.data);if(!d)return true;if(de&&d<de)return false;if(ate&&d>ate)return false;return true;});const te=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);const ts=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);let h=`<div style="font-size:12px;color:#6b7280;margin-bottom:8px">Período: ${deStr?new Date(deStr).toLocaleDateString('pt-BR'):'início'} até ${ateStr?new Date(ateStr).toLocaleDateString('pt-BR'):'hoje'}</div><div class="sumary"><div class="sc"><div class="sl">Registros</div><div class="sv">${fil.length}</div></div><div class="sc" style="border-left:3px solid #16a34a"><div class="sl">Entradas</div><div class="sv">+${fmtN(te)}</div></div><div class="sc" style="border-left:3px solid #dc2626"><div class="sl">Saídas</div><div class="sv" style="color:#dc2626">-${fmtN(ts)}</div></div></div><table><thead><tr><th>Data</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Qtd.</th></tr></thead><tbody>`;fil.forEach(m=>{h+=`<tr><td style="font-size:11px">${m.data||'—'}</td><td><span style="font-weight:700;color:${m.tipo==='entrada'?'#16a34a':'#dc2626'}">${m.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td><td>${m.itemNome}</td><td>${m.responsavel||'—'}</td><td>${m.projeto&&m.projeto!=='—'?m.projeto:'—'}</td><td style="font-size:11px">${m.motivo||'—'}</td><td class="num" style="color:${m.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${m.tipo==='entrada'?'+':'-'}${m.quantidade}</td></tr>`;});if(!fil.length)h+=`<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:20px">Nenhuma movimentação.</td></tr>`;h+=`</tbody></table>`;return h;}
-  if(id==='rel-parados'){const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();const ip=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let dp=null;let uds='Nunca movimentado';if(movs.length){const ul=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});uds=ul.data||'—';const ud=parseDateBR(ul.data);if(ud)dp=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,dp,uds};}).filter(p=>p.dp===null||p.dp>=dias).sort((a,b)=>(b.dp||9999)-(a.dp||9999));const vp=ip.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);let h=`<div class="sumary"><div class="sc"><div class="sl">Itens Parados</div><div class="sv" style="color:#dc2626">${ip.length}</div></div><div class="sc"><div class="sl">Valor Parado</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(vp)}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Localização</th><th class="num">Qtd.</th><th class="num">Valor</th><th>Última Mov.</th><th>Dias</th></tr></thead><tbody>`;ip.forEach(p=>{const bc=p.dp===null||p.dp>=180?'be':p.dp>=90?'bw':'';h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px">${p.uds}</td><td><span class="badge ${bc}">${p.dp===null?'Nunca':p.dp+'d'}</span></td></tr>`;});if(!ip.length)h+=`<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:20px">✅ Nenhum item parado!</td></tr>`;h+=`</tbody></table>`;return h;}
+  if(id==='rel-parados'){const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();const ip=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let dp=null;let uds='Nunca movimentado';if(movs.length){const ul=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});uds=ul.data||'—';const ud=parseDateBR(ul.data);if(ud)dp=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,dp,uds};}).filter(p=>(p.dp===null||p.dp>=dias)&&(!buscaPar||p.nome.toLowerCase().includes(buscaPar))).sort((a,b)=>(b.dp||9999)-(a.dp||9999));const vp=ip.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);let h=`<div class="sumary"><div class="sc"><div class="sl">Itens Parados</div><div class="sv" style="color:#dc2626">${ip.length}</div></div><div class="sc"><div class="sl">Valor Parado</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(vp)}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Localização</th><th class="num">Qtd.</th><th class="num">Valor</th><th>Última Mov.</th><th>Dias</th></tr></thead><tbody>`;ip.forEach(p=>{const bc=p.dp===null||p.dp>=180?'be':p.dp>=90?'bw':'';h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px">${p.uds}</td><td><span class="badge ${bc}">${p.dp===null?'Nunca':p.dp+'d'}</span></td></tr>`;});if(!ip.length)h+=`<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:20px">✅ Nenhum item parado!</td></tr>`;h+=`</tbody></table>`;return h;}
   return '';
 }
 
