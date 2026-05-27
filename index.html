@@ -543,7 +543,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 <div class="modal" style="max-width:900px">
   <div class="modal-header">
     <div class="modal-title" id="mos-title">📋 Ordem de Serviço</div>
-    <button class="modal-close" onclick="fecharModal('modal-os')">×</button>
+    <button class="modal-close" onclick="confirmarFecharOS()">×</button>
   </div>
   <div id="mos-header-info" style="margin:8px 0 12px"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
@@ -700,14 +700,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
 
 <div class="tabs">
   <div class="tabs-inner">
-    <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
-    <button class="tab" onclick="switchTab('estoque',this)">📦 Estoque</button>
+    <button class="tab active" id="tab-dash" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+    <button class="tab" id="tab-est" onclick="switchTab('estoque',this)">📦 Estoque</button>
     <button class="tab" id="tab-mov" onclick="switchTab('movimentacao',this)">↔️ Movimentação</button>
-    <button class="tab" onclick="switchTab('historico',this)">📋 Histórico</button>
-    <button class="tab" onclick="switchTab('reposicao',this)">🛒 Reposição</button>
-    <button class="tab" onclick="switchTab('projetos',this)">🏗️ Projetos</button>
-    <button class="tab" onclick="switchTab('fornecedores',this)">🏭 Fornecedores</button>
-    <button class="tab" onclick="switchTab('relatorios',this)">📊 Relatórios</button>
+    <button class="tab" id="tab-hist" onclick="switchTab('historico',this)">📋 Histórico</button>
+    <button class="tab" id="tab-rep" onclick="switchTab('reposicao',this)">🛒 Reposição</button>
+    <button class="tab" id="tab-proj" onclick="switchTab('projetos',this)">🏗️ Projetos</button>
+    <button class="tab" id="tab-forn" onclick="switchTab('fornecedores',this)">🏭 Fornecedores</button>
+    <button class="tab" id="tab-rel" onclick="switchTab('relatorios',this)">📊 Relatórios</button>
     <button class="tab" id="tab-config" onclick="switchTab('configuracoes',this)">⚙️ Configurações</button>
   </div>
 </div>
@@ -1097,11 +1097,26 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <div class="card-title" style="margin:0">📈 Movimentações por Período</div>
         <button class="btn-green" onclick="imprimirRelatorio('rel-movperiodo-print')">🖨️ Imprimir / PDF</button>
       </div>
-      <div class="periodo-filter">
-        <label>De:</label><input type="date" class="sel" id="rp-de" onchange="renderRelMovPeriodo()">
-        <label>Até:</label><input type="date" class="sel" id="rp-ate" onchange="renderRelMovPeriodo()">
-        <select class="sel" id="rp-tipo" onchange="renderRelMovPeriodo()"><option value="">Entradas e Saídas</option><option value="entrada">▲ Entradas</option><option value="saida">▼ Saídas</option></select>
-        <select class="sel" id="rp-proj" onchange="renderRelMovPeriodo()"><option value="">Todos os projetos</option></select>
+      <div class="periodo-filter" style="flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <label style="font-size:12px;font-weight:700">De:</label>
+        <input type="date" class="sel" id="rp-de" onchange="renderRelMovPeriodo()">
+        <label style="font-size:12px;font-weight:700">Até:</label>
+        <input type="date" class="sel" id="rp-ate" onchange="renderRelMovPeriodo()">
+        <select class="sel" id="rp-tipo" onchange="renderRelMovPeriodo()">
+          <option value="">Entradas e Saídas</option>
+          <option value="entrada">▲ Entradas</option>
+          <option value="saida">▼ Saídas</option>
+        </select>
+        <input type="text" class="sel" id="rp-item-busca" placeholder="🔍 Buscar por item..." oninput="renderRelMovPeriodo()" style="min-width:180px">
+        <input type="text" class="sel" id="rp-resp-busca" placeholder="👤 Responsável..." oninput="renderRelMovPeriodo()" style="min-width:150px">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:700;color:#374151">Colunas:</span>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="rp-col-data" checked onchange="renderRelMovPeriodo()"> Data</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="rp-col-tipo" checked onchange="renderRelMovPeriodo()"> Tipo</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="rp-col-resp" checked onchange="renderRelMovPeriodo()"> Responsável</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="rp-col-proj" checked onchange="renderRelMovPeriodo()"> Projeto</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="rp-col-motivo" checked onchange="renderRelMovPeriodo()"> Motivo</label>
       </div>
       <div class="rel-summary" id="rp-summary"></div>
       <div style="overflow-x:auto"><table class="rel-table">
@@ -1519,7 +1534,13 @@ function fazerLogout(){
 function aplicarPermissoes(){
   const nv=NIVEIS[usuarioAtual.nivel];
   ['btn-novo-item','btn-novo-proj','btn-novo-forn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=nv.cadastrar?'':'none';});
-  if(usuarioAtual.nivel==='visualizador')document.getElementById('tab-mov').style.display='none';
+  if(usuarioAtual.nivel==='visualizador'){
+    // Visualizador só vê aba Estoque
+    const abasOcultas=['tab-mov','tab-hist','tab-rep','tab-proj','tab-forn','tab-rel','tab-config','tab-man'];
+    abasOcultas.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+    // Garante que começa no Estoque
+    switchTab('estoque', document.getElementById('tab-est'));
+  }
   if(usuarioAtual.nivel!=='admin')document.getElementById('tab-config').style.display='none';
   if(nv.qr)document.getElementById('dash-qr').style.display='block';
 }
@@ -2081,43 +2102,7 @@ function setMovTipo(t){
   (t==='entrada'?motivosEntrada:motivosSaida).forEach(m => s.innerHTML += `<option>${m}</option>`);
 }
 
-async function salvarMovTab(){
-  if(!movItemTab) return showToast('Selecione um item.','err');
-  const qty = Number(document.getElementById('mov-qty2').value);
-  const resp = document.getElementById('mov-resp2').value.trim();
-  if(!qty||qty<=0) return showToast('Quantidade inválida.','err');
-  if(!resp) return showToast('Informe o responsável.','err');
-  const p = produtos.find(x => String(x.id)===String(movItemTab));
-  if(!p) return;
-  if(movTipoTab==='saida' && Number(p.quantidade)-qty<0) return showToast('Estoque insuficiente!','err');
-  const nova = movTipoTab==='entrada' ? Number(p.quantidade)+qty : Number(p.quantidade)-qty;
-  // Update locally first
-  p.quantidade = nova;
-  showToast(movTipoTab==='entrada'?'Entrada registrada!':'Saída registrada!');
-  adicionarNotif(`${movTipoTab==='entrada'?'Entrada':'Saída'}: ${p.nome} (${movTipoTab==='entrada'?'+':'-'}${qty} ${p.unidade})`,'info',movTipoTab==='entrada'?'📥':'📤');
-  document.getElementById('mov-search').value='';
-  document.getElementById('mov-selected').style.display='none';
-  document.getElementById('mov-qty2').value='';
-  document.getElementById('mov-resp2').value='';
-  document.getElementById('mov-obs2').value='';
-  movItemTab = null;
-  renderMovBaixo();
-  // Sync in background
-  try{
-    await api({action:'addMovimentacao',itemId:p.id,itemNome:p.nome,tipo:movTipoTab,quantidade:qty,
-      motivo:document.getElementById('mov-motivo2').value,
-      responsavel:resp,
-      projeto:document.getElementById('mov-proj2').value||'—',
-      obs:document.getElementById('mov-obs2')?.value||''});
-    await api({action:'editProduto',id:p.id,nome:p.nome,sku:p.sku||'',localizacao:p.localizacao||'',
-      categoria:p.categoria,quantidade:nova,unidade:p.unidade,estoqueMinimo:p.estoqueMinimo||0,
-      estoqueMaximo:p.estoqueMaximo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,
-      descricao:p.descricao||'',observacoes:p.observacoes||'',foto:p.foto||'',
-      codigoInterno:p.codigoInterno||''});
-    await carregarDados();
-  }catch(e){ showToast('Erro ao sincronizar.','err'); }
-}
-
+async 
 function renderMovHistResumo(){
   const el = document.getElementById('mov-hist');
   if(!el) return;
@@ -2196,7 +2181,9 @@ function renderHistorico(){
   fil.sort((a,b)=>{
     if(ord==='az') return a.itemNome.localeCompare(b.itemNome,'pt-BR');
     if(ord==='ant') return 0; // already oldest first if needed
-    return 0; // default: server order (most recent first)
+    const da=parseDateBR(a.data)||new Date(0);
+    const db=parseDateBR(b.data)||new Date(0);
+    return db-da;
   });
   document.getElementById('hist-count').textContent=fil.length+' registro'+(fil.length!==1?'s':'');
   const showData=document.getElementById('hcol-data')?.checked!==false;const showResp=document.getElementById('hcol-resp')?.checked!==false;const showProj=document.getElementById('hcol-proj')?.checked!==false;const showMotivo=document.getElementById('hcol-motivo')?.checked!==false;const showObs=document.getElementById('hcol-obs')?.checked!==false;
@@ -2596,7 +2583,12 @@ function renderRelPorProjeto(){
   if(rpp){
     const curr=rpp.value;
     rpp.innerHTML='<option value="">Todos os projetos</option>';
-    [...new Set(historico.map(h=>h.projeto).filter(p=>p&&p!=='—'))].forEach(p=>rpp.innerHTML+=`<option value="${p}">${p}</option>`);
+    // Popula com todos os projetos (qualquer status) + projetos do histórico
+    const nomesProj=new Set([
+      ...projetos.map(p=>p.nome).filter(Boolean),
+      ...historico.map(h=>h.projeto).filter(p=>p&&p!=='—')
+    ]);
+    [...nomesProj].sort().forEach(p=>rpp.innerHTML+=`<option value="${p}">${p}</option>`);
     if(curr)rpp.value=curr;
   }
   const proj=document.getElementById('rpp-proj')?.value||'';
@@ -2872,12 +2864,51 @@ function atualizarAuditoria(id,campo,val){if(!auditoriaContagens[id])auditoriaCo
 function limparAuditoria(){if(!confirm('Limpar todas as contagens?'))return;auditoriaContagens={};renderRelAuditoria();showToast('Contagens limpas.');}
 
 function renderRelMovPeriodo(){
-  const deStr=document.getElementById('rp-de')?.value;const ateStr=document.getElementById('rp-ate')?.value;const tipo=document.getElementById('rp-tipo')?.value||'';const proj=document.getElementById('rp-proj')?.value||'';
-  const de=deStr?new Date(deStr+'T00:00:00'):null;const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
-  const fil=historico.filter(h=>{if(tipo&&h.tipo!==tipo)return false;if(proj&&h.projeto!==proj)return false;const d=parseDateBR(h.data);if(!d)return true;if(de&&d<de)return false;if(ate&&d>ate)return false;return true;});
-  const totalE=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);const totalS=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);
+  const deStr=document.getElementById('rp-de')?.value;
+  const ateStr=document.getElementById('rp-ate')?.value;
+  const tipo=document.getElementById('rp-tipo')?.value||'';
+  const itemBusca=(document.getElementById('rp-item-busca')?.value||'').toLowerCase();
+  const respBusca=(document.getElementById('rp-resp-busca')?.value||'').toLowerCase();
+  const de=deStr?new Date(deStr+'T00:00:00'):null;
+  const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
+
+  const fil=historico.filter(h=>{
+    if(tipo&&h.tipo!==tipo)return false;
+    if(itemBusca&&!(h.itemNome||'').toLowerCase().includes(itemBusca))return false;
+    if(respBusca&&!(h.responsavel||'').toLowerCase().includes(respBusca))return false;
+    const d=parseDateBR(h.data);
+    if(de&&d&&d<de)return false;
+    if(ate&&d&&d>ate)return false;
+    return true;
+  });
+
+  // Ordenar mais recente primeiro
+  fil.sort((a,b)=>{const da=parseDateBR(a.data)||new Date(0);const db=parseDateBR(b.data)||new Date(0);return db-da;});
+
+  const totalE=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);
+  const totalS=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);
   document.getElementById('rp-summary').innerHTML=`<div class="rel-sum-card"><div class="rel-sum-label">Registros</div><div class="rel-sum-val">${fil.length}</div></div><div class="rel-sum-card" style="border-left:4px solid #16a34a"><div class="rel-sum-label">Total Entradas</div><div class="rel-sum-val">+${fmtN(totalE)}</div></div><div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(totalS)}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Itens Distintos</div><div class="rel-sum-val" style="color:#7c3aed">${new Set(fil.map(h=>h.itemId)).size}</div></div>`;
-  document.getElementById('rp-body').innerHTML=fil.length?fil.map(h=>`<tr><td style="font-size:11px;color:#6b7280">${formatarDataLegivel(h.data)}</td><td><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td><td style="font-weight:600"><span style="font-size:10px;color:#16a34a;background:#f0fdf4;padding:1px 5px;border-radius:4px;margin-right:4px">${h.codigoInterno||''}</span>${h.itemNome}</td><td>${h.responsavel||'—'}</td><td>${h.projeto&&h.projeto!=='—'?h.projeto:'—'}</td><td style="font-size:11px;color:#6b7280">${h.motivo||'—'}</td><td class="num" style="color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação no período.</td></tr>';
+  fil.sort((a,b)=>{const da=parseDateBR(a.data)||new Date(0);const db=parseDateBR(b.data)||new Date(0);return db-da;});
+  const showData=document.getElementById('rp-col-data')?.checked!==false;
+  const showTipo=document.getElementById('rp-col-tipo')?.checked!==false;
+  const showResp=document.getElementById('rp-col-resp')?.checked!==false;
+  const showProj=document.getElementById('rp-col-proj')?.checked!==false;
+  const showMotivo=document.getElementById('rp-col-motivo')?.checked!==false;
+  const nCols=[showData,showTipo,true,showResp,showProj,showMotivo,true].filter(Boolean).length;
+  const thead=document.querySelector('#rel-movperiodo thead tr');
+  if(thead){
+    const hdrs=[['Data',showData],['Tipo',showTipo],['Item',true],['Responsável',showResp],['Projeto',showProj],['Motivo',showMotivo],['Qtd.',true]];
+    thead.innerHTML=hdrs.map(([h,s],i)=>s?`<th${i===6?' class="num"':''}>${h}</th>`:'').join('');
+  }
+  document.getElementById('rp-body').innerHTML=fil.length?fil.map(h=>`<tr>
+    ${showData?`<td style="font-size:11px;color:#6b7280">${formatarDataLegivel(h.data)}</td>`:''}
+    ${showTipo?`<td><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td>`:''}
+    <td style="font-weight:600"><span style="font-size:10px;color:#16a34a;background:#f0fdf4;padding:1px 5px;border-radius:4px;margin-right:4px">${h.codigoInterno||''}</span>${h.itemNome}</td>
+    ${showResp?`<td>${h.responsavel||'—'}</td>`:''}
+    ${showProj?`<td>${h.projeto&&h.projeto!=='—'?h.projeto:'—'}</td>`:''}
+    ${showMotivo?`<td style="font-size:11px;color:#6b7280">${h.motivo||'—'}</td>`:''}
+    <td class="num" style="color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</td>
+  </tr>`).join(''):`<tr><td colspan="${nCols}" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>`;
 }
 
 function renderRelParados(){
@@ -3100,9 +3131,9 @@ function renderMateriais(p){
       <thead>
         <tr>
           <th>Material</th>
-          <th style="text-align:center">Precisa</th>
+          <th style="text-align:center">Saída</th>
           <th style="text-align:center">Estoque</th>
-          <th style="text-align:center">Situação</th>
+          <th style="text-align:center">Disponibilidade</th>
           <th style="text-align:center">✅ Separado</th>
           <th style="text-align:center">Ações</th>
         </tr>
@@ -3150,8 +3181,9 @@ function renderMateriais(p){
             </td>
             <td style="text-align:center">
               <div style="display:flex;gap:4px;justify-content:center;align-items:center">
-                ${m.itemId&&st==='separado'&&!m.debitado?`<button class="btn-out" style="font-size:11px;padding:3px 7px" onclick="debitarItemEstoque('${osProjetoId}',${i})" title="Debitar do estoque">📤</button>`:''}
-                ${m.debitado?`<span style="font-size:10px;color:#16a34a;font-weight:700" title="Já debitado do estoque">✅</span>`:''}
+                ${m.itemId&&st==='separado'&&!m.debitado?`<button class="btn-out" style="font-size:11px;padding:3px 7px" onclick="debitarItemEstoque('${osProjetoId}',${i})" title="Debitar do estoque">📤 Debitar</button>`:''} 
+                ${m.itemId&&st==='separado'&&!m.debitado?`<button class="btn-gray" style="font-size:11px;padding:3px 7px;color:#d97706;border-color:#fde68a" onclick="desfazerSeparacao('${osProjetoId}',${i})" title="Desfazer separação">↩️ Desfazer</button>`:''}
+                ${m.debitado?`<span style="font-size:10px;color:#16a34a;font-weight:700" title="Já debitado do estoque">✅ Debitado</span>`:''}
                 ${pode('editar')?`<button class="btn-gray" style="font-size:11px;padding:3px 6px" onclick="editarObsMat('${osProjetoId}',${i})" title="Observação">💬</button>`:''}
                 ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:3px 6px" onclick="removerMat('${osProjetoId}',${i})" title="Remover">🗑️</button>`:''}
               </div>
@@ -3162,6 +3194,26 @@ function renderMateriais(p){
     </table>
     </div>`
     : '<div class="empty" style="padding:24px">Nenhum material adicionado. Clique em "+ Adicionar Material" para começar.</div>';
+}
+
+function desfazerSeparacao(projId, idx){
+  if(!confirm('Desfazer a separação deste item?'))return;
+  const p=projetos.find(x=>String(x.id)===String(projId));
+  if(!p||!p.materiais)return;
+  p.materiais[idx].status='pendente';
+  syncProjetoSheets(p);
+  renderMateriais(p);
+  showToast('Separação desfeita!');
+}
+
+function confirmarFecharOS(){
+  const p=projetos.find(x=>String(x.id)===String(osProjetoId));
+  if(!p)return fecharModal('modal-os');
+  const temNaoSalvo=p.materiais&&p.materiais.some(m=>m.status==='separado'&&!m.debitado);
+  if(temNaoSalvo){
+    if(!confirm('Existem itens separados ainda não debitados do estoque. Deseja fechar mesmo assim?'))return;
+  }
+  fecharModal('modal-os');
 }
 
 function setMatStatus(projId, idx, status){
@@ -3275,7 +3327,7 @@ function imprimirOS(){
     <div style="font-size:11px;margin-top:4px;opacity:.9">${separados} de ${mats.length} itens separados</div>
   </div>
   ${p.obs?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">📝 ${p.obs}</div>`:''}
-  <table><thead><tr><th>#</th><th>Material</th><th style="text-align:center">Precisa</th><th style="text-align:center">Estoque</th><th style="text-align:center">Situação</th><th>Status</th><th>Observação</th></tr></thead><tbody>
+  <table><thead><tr><th>#</th><th>Material</th><th style="text-align:center">Saída</th><th style="text-align:center">Estoque</th><th style="text-align:center">Disponibilidade</th><th>Status</th><th>Observação</th></tr></thead><tbody>
   ${mats.map((m,i)=>{
     const prod = produtos.find(x=>String(x.id)===String(m.itemId));
     const est = prod ? Number(prod.quantidade) : null;
@@ -3913,17 +3965,6 @@ function cancelarAddMaterial(){
   matEstSelecionado = null;
 }
 
-function abrirAddMaterial(){
-  document.getElementById('add-material-form').style.display = 'block';
-  setMatTab('estoque');
-  document.getElementById('mat-est-search').focus();
-}
-// ===================== FIM MATERIAL ESTOQUE =====================
-
-
-// ===================== MATERIAIS NO MODAL DE PROJETO =====================
-let mpMatSelecionado = null;
-let mpMateriais = []; // temp list while creating/editing project
 
 function abrirAddMatProjeto(){
   mpMatSelecionado = null;
@@ -3990,13 +4031,25 @@ function confirmarAddMatProjeto(){
   else if(estoque > 0){ disponivel = '🟡'; status = 'parcial'; }
   else { disponivel = '🔴'; status = 'falta'; }
 
-  mpMateriais.push({
-    nome: mpMatSelecionado.nome,
-    qty, unidade: mpMatSelecionado.unidade,
-    obs, itemId: mpMatSelecionado.id,
-    estoqueAtual: estoque,
-    status: 'pendente', debitado: false
-  });
+  // Verifica se item já existe na OS — se sim, soma a quantidade
+  const existente = mpMateriais.find(m => String(m.itemId) === String(mpMatSelecionado.id));
+  if(existente){
+    existente.qty += qty;
+    existente.estoqueAtual = estoque;
+    // Recalcula status de disponibilidade
+    if(estoque >= existente.qty){ existente.disponivel='✅'; }
+    else if(estoque > 0){ existente.disponivel='🟡'; }
+    else { existente.disponivel='🔴'; }
+    showToast(`Quantidade atualizada: ${existente.nome} → ${existente.qty} ${existente.unidade}`);
+  } else {
+    mpMateriais.push({
+      nome: mpMatSelecionado.nome,
+      qty, unidade: mpMatSelecionado.unidade,
+      obs, itemId: mpMatSelecionado.id,
+      estoqueAtual: estoque,
+      status: 'pendente', debitado: false
+    });
+  }
   cancelarAddMatProjeto();
   renderMpLista();
 }
@@ -4024,7 +4077,7 @@ function renderMpLista(){
       <div style="flex:1">
         <div style="font-weight:600;font-size:13px">${m.nome}</div>
         <div style="font-size:11px;color:#6b7280;margin-top:2px">
-          Precisa: <strong>${m.qty} ${m.unidade}</strong> · Tem: <strong style="color:${cor}">${est} ${m.unidade}</strong>
+          Saída: <strong>${m.qty} ${m.unidade}</strong> · Tem: <strong style="color:${cor}">${est} ${m.unidade}</strong>
           ${m.obs?` · ${m.obs}`:''}
         </div>
         <div style="font-size:11px;font-weight:700;color:${cor};margin-top:2px">${badge}</div>
@@ -4131,20 +4184,6 @@ function gerarTodasEtiquetas(){
   <body><button onclick="window.print()" style="margin:10px;padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimir Todas</button>
   <div>${itens.map((x,i)=>`<div class="etiq"><div id="qr${i}"></div><div class="nome">${x.p.nome}</div><div class="cod">${x.cod}</div></div>`).join('')}</div>
   <script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script></body></html>`);
-  win.document.close();
-}
-
-function imprimirQRSistema(){
-  const url = window.location.origin + window.location.pathname;
-  const win = window.open('','_blank','width=400,height=350');
-  win.document.write(`<!DOCTYPE html><html><head><title>QR - ERP Muda</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head>
-  <body style="font-family:Arial;text-align:center;padding:20px">
-  <div id="qr"></div>
-  <div style="font-weight:700;font-size:16px;margin-top:10px;color:#14532d">🌿 Muda Paisagismo</div>
-  <div style="font-size:12px;color:#6b7280;margin-top:4px">Sistema ERP — Controle de Estoque</div>
-  <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:180,height:180,colorDark:'#14532d'});
-  setTimeout(()=>window.print(),600);<\/script></body></html>`);
   win.document.close();
 }
 
