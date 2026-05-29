@@ -18,6 +18,7 @@
 <link rel="apple-touch-icon" href="https://mudapaisagismo.com.br/wp-content/uploads/2025/05/logo_muda-paisagismo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1a;min-height:100vh}
@@ -1110,7 +1111,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
           <option value="entrada">▲ Entradas</option>
           <option value="saida">▼ Saídas</option>
         </select>
-        <input type="text" class="sel" id="rp-item-busca" placeholder="🔍 Buscar por item..." oninput="renderRelMovPeriodo()" style="min-width:180px">
+        <input type="text" class="sel" id="rp-item-busca" placeholder="🔍 Buscar item..." oninput="renderRelMovPeriodo()" style="min-width:180px">
         <input type="text" class="sel" id="rp-resp-busca" placeholder="👤 Responsável..." oninput="renderRelMovPeriodo()" style="min-width:150px">
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
@@ -1158,7 +1159,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <input type="date" class="sel" id="rg-de" onchange="renderRelGeral()">
         <input type="date" class="sel" id="rg-ate" onchange="renderRelGeral()">
-        <input type="text" class="sel" id="rg-busca" placeholder="🔍 Buscar item..." oninput="renderRelGeral()" style="min-width:180px">
         <select class="sel" id="rg-tipo" onchange="renderRelGeral()">
           <option value="">Entradas e Saídas</option>
           <option value="entrada">▲ Apenas Entradas</option>
@@ -1181,7 +1181,6 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <button class="btn-green" onclick="imprimirRelatorio('rel-porprojeto-print')">🖨️ Imprimir / PDF</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <input type="text" class="sel" id="rpp-busca" placeholder="🔍 Buscar item..." oninput="renderRelPorProjeto()" style="min-width:180px">
         <select class="sel" id="rpp-proj" onchange="renderRelPorProjeto()" style="min-width:200px">
           <option value="">Todos os projetos</option>
         </select>
@@ -1252,39 +1251,31 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
   <div class="card">
     <div class="card-title">📄 Importar PDF — Memorial de Produção</div>
     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;font-size:13px;color:#1e40af;margin-bottom:16px">
-      💡 Faça upload do Memorial de Produção em PDF. O sistema vai ler automaticamente, identificar os itens do estoque e criar/vincular ao projeto correspondente.
+      💡 Faça upload do Memorial de Produção em PDF. O sistema lê automaticamente os itens, cria ou vincula ao projeto e permite debitar do estoque com um clique.
     </div>
-
-    <!-- UPLOAD -->
     <div id="pdf-upload-area" style="border:2px dashed #93c5fd;border-radius:12px;padding:32px;text-align:center;cursor:pointer;background:#f0f9ff;margin-bottom:16px" onclick="document.getElementById('pdf-file-input').click()">
       <div style="font-size:40px;margin-bottom:8px">📄</div>
       <div style="font-weight:700;color:#1e40af;font-size:15px">Clique para selecionar o PDF</div>
       <div style="font-size:12px;color:#6b7280;margin-top:4px">Memorial de Produção — Pipefy</div>
       <input type="file" id="pdf-file-input" accept=".pdf" style="display:none" onchange="processarPDF(event)">
     </div>
-
-    <!-- STATUS DO PROCESSAMENTO -->
     <div id="pdf-status" style="display:none;margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px">
-        <div class="spinner" id="pdf-spinner"></div>
+        <div class="spinner"></div>
         <span id="pdf-status-msg" style="font-size:13px;font-weight:600;color:#15803d">Lendo PDF...</span>
       </div>
     </div>
-
-    <!-- DADOS EXTRAÍDOS -->
     <div id="pdf-dados" style="display:none">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:16px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
-        <div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Pedido/Projeto</div><div style="font-weight:800;font-size:16px;color:#14532d" id="pdf-numero">—</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;padding:14px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+        <div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Pedido</div><div style="font-weight:800;font-size:16px;color:#14532d" id="pdf-numero">—</div></div>
         <div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Cliente</div><div style="font-weight:600;font-size:13px" id="pdf-cliente">—</div></div>
         <div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Responsável</div><div style="font-weight:600;font-size:13px" id="pdf-resp">—</div></div>
         <div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Entrega</div><div style="font-weight:600;font-size:13px" id="pdf-entrega">—</div></div>
         <div><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Projeto no ERP</div><div style="font-weight:600;font-size:13px" id="pdf-proj-status">—</div></div>
       </div>
-
-      <!-- TABELA DE ITENS -->
       <div style="font-weight:700;color:#14532d;margin-bottom:10px;font-size:14px">📦 Itens identificados</div>
       <div style="overflow-x:auto;margin-bottom:16px">
-        <table style="width:100%;border-collapse:collapse;font-size:13px" id="pdf-itens-table">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
             <tr style="background:#f0fdf4">
               <th style="padding:9px 12px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:12px;color:#14532d">Item no PDF</th>
@@ -1298,15 +1289,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
           <tbody id="pdf-itens-body"></tbody>
         </table>
       </div>
-
-      <!-- AÇÕES -->
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn-green" style="padding:10px 20px;font-size:14px" onclick="confirmarImportacaoPDF()">✅ Confirmar e Debitar</button>
         <button class="btn-gray" onclick="cancelarImportacaoPDF()">🔄 Novo PDF</button>
       </div>
     </div>
-
-    <!-- RESULTADO -->
     <div id="pdf-resultado" style="display:none;margin-top:16px"></div>
   </div>
 </div>
@@ -1607,7 +1594,7 @@ function aplicarPermissoes(){
   const nv=NIVEIS[usuarioAtual.nivel];
   ['btn-novo-item','btn-novo-proj','btn-novo-forn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=nv.cadastrar?'':'none';});
   if(usuarioAtual.nivel==='visualizador'){
-    ['tab-dash','tab-mov','tab-hist','tab-rep','tab-proj','tab-forn','tab-rel','tab-config','tab-man'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+    ['tab-dash','tab-mov','tab-hist','tab-proj','tab-forn','tab-rel','tab-config'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
     switchTab('estoque', document.getElementById('tab-est'));
   }
   if(usuarioAtual.nivel!=='admin')document.getElementById('tab-config').style.display='none';
@@ -2250,12 +2237,12 @@ function renderHistorico(){
   const ord=document.getElementById('hist-ord')?.value||'rec';
   const fil=historico.filter(h=>(!t||h.tipo===t)&&(!pf||h.projeto===pf)&&(h.itemNome.toLowerCase().includes(q)||(h.responsavel||'').toLowerCase().includes(q)||(h.projeto||'').toLowerCase().includes(q)));
   fil.sort((a,b)=>{
-    if(ord==='az') return String(a.itemNome||'').localeCompare(String(b.itemNome||''),'pt-BR');
-    if(ord==='za') return String(b.itemNome||'').localeCompare(String(a.itemNome||''),'pt-BR');
+    if(ord==='az') return a.itemNome.localeCompare(b.itemNome,'pt-BR');
+    if(ord==='ant') return 0; // already oldest first if needed
     const da=parseDateBR(a.data)||new Date(0);
     const db=parseDateBR(b.data)||new Date(0);
     if(ord==='ant') return da-db;
-    return db-da; // padrão: mais recente primeiro
+    return db-da;
   });
   document.getElementById('hist-count').textContent=fil.length+' registro'+(fil.length!==1?'s':'');
   const showData=document.getElementById('hcol-data')?.checked!==false;const showResp=document.getElementById('hcol-resp')?.checked!==false;const showProj=document.getElementById('hcol-proj')?.checked!==false;const showMotivo=document.getElementById('hcol-motivo')?.checked!==false;const showObs=document.getElementById('hcol-obs')?.checked!==false;
@@ -2587,16 +2574,13 @@ function fmtN(n){return Number(n||0).toLocaleString('pt-BR');}
 function parseDateBR(str){
   try{
     if(!str)return null;
-    // Formato ISO com T
     if(str.includes('T'))return new Date(str);
-    // Formato ISO puro: 2026-05-13
     if(str.includes('-')&&str.substring(0,4).match(/\d{4}/))return new Date(str.substring(0,10)+'T00:00:00');
-    // Formato BR: "13/05/2026 15:19:00" ou "13/05/2026, 15:19"
-    const parteData=str.split(',')[0].trim().split(' ')[0]; // pega só "13/05/2026"
+    const parteData=str.split(',')[0].trim().split(' ')[0];
     const partes=parteData.split('/');
     if(partes.length===3){
-      const hora=str.split(' ')[1]||'00:00';
-      const [h,m]=(hora.replace(',','').trim()).split(':');
+      const horaStr=str.split(' ')[1]||'00:00';
+      const [h,m]=(horaStr.replace(',','').trim()).split(':');
       return new Date(Number(partes[2]),Number(partes[1])-1,Number(partes[0]),Number(h)||0,Number(m)||0);
     }
     return null;
@@ -2635,12 +2619,10 @@ function renderRelGeral(){
   const deStr=document.getElementById('rg-de')?.value;
   const ateStr=document.getElementById('rg-ate')?.value;
   const tipo=document.getElementById('rg-tipo')?.value||'';
-  const buscaG=(document.getElementById('rg-busca')?.value||'').toLowerCase();
   const de=deStr?new Date(deStr+'T00:00:00'):null;
   const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
   const fil=historico.filter(h=>{
     if(tipo&&h.tipo!==tipo)return false;
-    if(buscaG&&!(h.itemNome||'').toLowerCase().includes(buscaG))return false;
     const d=parseDateBR(h.data)||new Date(h.data);
     if(de&&d<de)return false;
     if(ate&&d>ate)return false;
@@ -2679,7 +2661,6 @@ function renderRelPorProjeto(){
     if(curr)rpp.value=curr;
   }
   const proj=document.getElementById('rpp-proj')?.value||'';
-  const buscaPP=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
   const deStr=document.getElementById('rpp-de')?.value;
   const ateStr=document.getElementById('rpp-ate')?.value;
   const de=deStr?new Date(deStr+'T00:00:00'):null;
@@ -2687,7 +2668,6 @@ function renderRelPorProjeto(){
   const fil=historico.filter(h=>{
     if(h.tipo!=='saida')return false;
     if(proj&&h.projeto!==proj)return false;
-    if(buscaPP&&!(h.itemNome||'').toLowerCase().includes(buscaPP))return false;
     if(!h.projeto||h.projeto==='—')return false;
     const d=parseDateBR(h.data)||new Date(h.data);
     if(de&&d<de)return false;
@@ -2980,8 +2960,7 @@ function renderRelMovPeriodo(){
 }
 
 function renderRelParados(){
-  const dias=Number(document.getElementById('rpar-dias')?.value||30);
-  const buscaPar=(document.getElementById('rpar-busca')?.value||'').toLowerCase();const hoje=new Date();
+  const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();
   const itensParados=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let diasParado=null;let ultimaDataStr='Nunca movimentado';if(movs.length){const ultima=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});ultimaDataStr=ultima.data||'—';const ud=parseDateBR(ultima.data);if(ud)diasParado=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,diasParado,ultimaDataStr};}).filter(p=>p.diasParado===null||p.diasParado>=dias).sort((a,b)=>(b.diasParado||9999)-(a.diasParado||9999));
   const valorParado=itensParados.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);
   document.getElementById('rpar-summary').innerHTML=`<div class="rel-sum-card"><div class="rel-sum-label">Itens Parados (+${dias}d)</div><div class="rel-sum-val" style="color:#dc2626">${itensParados.length}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Valor Parado</div><div class="rel-sum-val" style="color:#ca8a04;font-size:16px">R$ ${fmt(valorParado)}</div></div>`;
@@ -2992,29 +2971,7 @@ function imprimirRelatorio(relId){
   const tit={'rel-valor-print':'💰 Valor por Item','rel-auditoria-print':'📋 Lista para Auditoria','rel-movperiodo-print':'📈 Movimentações por Período','rel-parados-print':'😴 Itens Parados'};
   const data=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const win=window.open('','_blank','width=900,height=700');
-  win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${tit[relId]}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',sans-serif;color:#1a1a1a;padding:24px;font-size:13px}.hdr{display:flex;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #16a34a}.logo{font-weight:800;font-size:16px;color:#14532d}.sub{font-size:11px;color:#6b7280;margin-top:2px}.titulo{font-size:18px;font-weight:800;color:#14532d;margin-bottom:16px}.sumary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.sc{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;flex:1;min-width:100px}.sl{font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase}.sv{font-size:18px;font-weight:800;color:#14532d;margin-top:2px}table{width:100%;border-collapse:collapse}th{background:#f0fdf4;color:#14532d;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}.num{text-align:right;font-weight:700;font-family:monospace}tfoot td{background:#f0fdf4;font-weight:800;color:#14532d}.footer{margin-top:20px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}.badge{border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}.be{background:#fef2f2;color:#dc2626}.bw{background:#fffbeb;color:#d97706}@media print{button{display:none!important}}</style></head><body><div class="hdr"><div><div class="logo">🌿 Muda Paisagismo</div><div class="sub">Sistema ERP — Controle de Estoque</div></div><div style="text-align:right;font-size:11px;color:#6b7280"><div>Gerado em: ${data}</div><div>Usuário: ${usuarioAtual?.nome||'—'}</div></div></div><div class="titulo">${tit[relId]}</div>${gerarConteudoImpressao(relId.replace('-print',''))}<div class="footer">Muda Paisagismo · ERP · ${data}</div><br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
-<!-- ASSISTENTE IA FLUTUANTE -->
-<div id="ia-btn" onclick="toggleIA()" style="position:fixed;bottom:24px;right:24px;width:52px;height:52px;background:linear-gradient(135deg,#14532d,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px #14532d44;z-index:9990;font-size:22px;transition:transform .2s" title="Assistente IA">✨</div>
-
-<div id="ia-panel" style="display:none;position:fixed;bottom:86px;right:24px;width:360px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 32px #0003;border:1px solid #e5e7eb;z-index:9989;flex-direction:column;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">✨</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:14px">Assistente IA</div>
-        <div style="color:#bbf7d0;font-size:10px">Powered by Claude</div>
-      </div>
-    </div>
-    <button onclick="toggleIA()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
-  </div>
-  <div id="ia-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;min-height:200px"></div>
-  <div style="padding:10px 12px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-    <input id="ia-input" type="text" placeholder="Pergunte sobre o estoque..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:20px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')enviarMsgIA()">
-    <button onclick="enviarMsgIA()" style="background:#16a34a;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-  </div>
-</div>
-
-</body></html>`);
+  win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${tit[relId]}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',sans-serif;color:#1a1a1a;padding:24px;font-size:13px}.hdr{display:flex;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #16a34a}.logo{font-weight:800;font-size:16px;color:#14532d}.sub{font-size:11px;color:#6b7280;margin-top:2px}.titulo{font-size:18px;font-weight:800;color:#14532d;margin-bottom:16px}.sumary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.sc{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;flex:1;min-width:100px}.sl{font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase}.sv{font-size:18px;font-weight:800;color:#14532d;margin-top:2px}table{width:100%;border-collapse:collapse}th{background:#f0fdf4;color:#14532d;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:11px}td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}.num{text-align:right;font-weight:700;font-family:monospace}tfoot td{background:#f0fdf4;font-weight:800;color:#14532d}.footer{margin-top:20px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}.badge{border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}.be{background:#fef2f2;color:#dc2626}.bw{background:#fffbeb;color:#d97706}@media print{button{display:none!important}}</style></head><body><div class="hdr"><div><div class="logo">🌿 Muda Paisagismo</div><div class="sub">Sistema ERP — Controle de Estoque</div></div><div style="text-align:right;font-size:11px;color:#6b7280"><div>Gerado em: ${data}</div><div>Usuário: ${usuarioAtual?.nome||'—'}</div></div></div><div class="titulo">${tit[relId]}</div>${gerarConteudoImpressao(relId.replace('-print',''))}<div class="footer">Muda Paisagismo · ERP · ${data}</div><br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button></body></html>`);
   win.document.close();
 }
 
@@ -3022,7 +2979,7 @@ function gerarConteudoImpressao(id){
   if(id==='rel-valor'){const cat=document.getElementById('rv-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat);const tv=fil.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);const sc=fil.filter(p=>!Number(p.custo)).length;const pc={};fil.forEach(p=>{const c=p.categoria||'outros';if(!pc[c])pc[c]={label:CATS[c]?.label||c,icon:CATS[c]?.icon||'📦',itens:[],valor:0};pc[c].itens.push(p);pc[c].valor+=Number(p.custo||0)*Number(p.quantidade||0);});let h=`<div class="sumary"><div class="sc"><div class="sl">Itens</div><div class="sv">${fil.length}</div></div><div class="sc"><div class="sl">Valor Total</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(tv)}</div></div><div class="sc"><div class="sl">Sem Custo</div><div class="sv" style="color:${sc>0?'#dc2626':'#16a34a'}">${sc}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Un.</th><th class="num">Qtd.</th><th class="num">Custo Unit.</th><th class="num">Valor Total</th></tr></thead><tbody>`;Object.entries(pc).forEach(([ci,g])=>{h+=`<tr style="background:#f0fdf4"><td colspan="6" style="font-weight:800;color:#14532d;padding:8px 10px">${g.icon} ${g.label} — R$ ${fmt(g.valor)}</td></tr>`;g.itens.forEach(p=>{const v=Number(p.custo||0)*Number(p.quantidade||0);h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.label||p.categoria}</td><td>${p.unidade}</td><td class="num">${fmtN(p.quantidade)}</td><td class="num">${Number(p.custo)>0?'R$ '+fmt(p.custo):'—'}</td><td class="num">${v>0?'R$ '+fmt(v):'—'}</td></tr>`;});});h+=`</tbody><tfoot><tr><td colspan="3" style="padding:8px 10px">TOTAL GERAL</td><td></td><td></td><td class="num">R$ ${fmt(tv)}</td></tr></tfoot></table>`;return h;}
   if(id==='rel-auditoria'){const cat=document.getElementById('ra-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||'')));let h=`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:12px">📋 Preencha a coluna "Contagem Física" durante a conferência.</div><table><thead><tr><th>Código</th><th>Item</th><th>Localização</th><th>Un.</th><th class="num">Qtd. Sistema</th><th class="num">Contagem</th><th class="num">Diferença</th><th>Obs.</th></tr></thead><tbody>`;fil.forEach(p=>{const cod=getCodigo(p);const cont=auditoriaContagens[p.id]||{qty:'',obs:''};const diff=cont.qty!==''?(Number(cont.qty)-Number(p.quantidade)):'';const ds=diff===''?'___':(diff>0?`<span style="color:#16a34a;font-weight:700">+${diff}</span>`:diff<0?`<span style="color:#dc2626;font-weight:700">${diff}</span>`:'0');h+=`<tr><td style="font-size:11px;color:#16a34a;font-weight:700">${cod}</td><td>${p.nome}</td><td style="color:#7c3aed;font-size:11px">${p.localizacao||'—'}</td><td>${p.unidade}</td><td class="num" style="font-weight:700">${p.quantidade}</td><td class="num">${cont.qty||'___'}</td><td class="num">${ds}</td><td style="font-size:11px">${cont.obs||'___'}</td></tr>`;});h+=`</tbody></table><div style="margin-top:12px;font-size:11px;color:#6b7280">Total: ${fil.length} itens · Data: ___/___/______ · Responsável: _______________________</div>`;return h;}
   if(id==='rel-movperiodo'){const deStr=document.getElementById('rp-de')?.value;const ateStr=document.getElementById('rp-ate')?.value;const tipo=document.getElementById('rp-tipo')?.value||'';const proj=document.getElementById('rp-proj')?.value||'';const de=deStr?new Date(deStr+'T00:00:00'):null;const ate=ateStr?new Date(ateStr+'T23:59:59'):null;const fil=historico.filter(h=>{if(tipo&&h.tipo!==tipo)return false;if(proj&&h.projeto!==proj)return false;const d=parseDateBR(h.data);if(!d)return true;if(de&&d<de)return false;if(ate&&d>ate)return false;return true;});const te=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);const ts=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);let h=`<div style="font-size:12px;color:#6b7280;margin-bottom:8px">Período: ${deStr?new Date(deStr).toLocaleDateString('pt-BR'):'início'} até ${ateStr?new Date(ateStr).toLocaleDateString('pt-BR'):'hoje'}</div><div class="sumary"><div class="sc"><div class="sl">Registros</div><div class="sv">${fil.length}</div></div><div class="sc" style="border-left:3px solid #16a34a"><div class="sl">Entradas</div><div class="sv">+${fmtN(te)}</div></div><div class="sc" style="border-left:3px solid #dc2626"><div class="sl">Saídas</div><div class="sv" style="color:#dc2626">-${fmtN(ts)}</div></div></div><table><thead><tr><th>Data</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Qtd.</th></tr></thead><tbody>`;fil.forEach(m=>{h+=`<tr><td style="font-size:11px">${m.data||'—'}</td><td><span style="font-weight:700;color:${m.tipo==='entrada'?'#16a34a':'#dc2626'}">${m.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td><td>${m.itemNome}</td><td>${m.responsavel||'—'}</td><td>${m.projeto&&m.projeto!=='—'?m.projeto:'—'}</td><td style="font-size:11px">${m.motivo||'—'}</td><td class="num" style="color:${m.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${m.tipo==='entrada'?'+':'-'}${m.quantidade}</td></tr>`;});if(!fil.length)h+=`<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:20px">Nenhuma movimentação.</td></tr>`;h+=`</tbody></table>`;return h;}
-  if(id==='rel-parados'){const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();const ip=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let dp=null;let uds='Nunca movimentado';if(movs.length){const ul=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});uds=ul.data||'—';const ud=parseDateBR(ul.data);if(ud)dp=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,dp,uds};}).filter(p=>(p.dp===null||p.dp>=dias)&&(!buscaPar||p.nome.toLowerCase().includes(buscaPar))).sort((a,b)=>(b.dp||9999)-(a.dp||9999));const vp=ip.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);let h=`<div class="sumary"><div class="sc"><div class="sl">Itens Parados</div><div class="sv" style="color:#dc2626">${ip.length}</div></div><div class="sc"><div class="sl">Valor Parado</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(vp)}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Localização</th><th class="num">Qtd.</th><th class="num">Valor</th><th>Última Mov.</th><th>Dias</th></tr></thead><tbody>`;ip.forEach(p=>{const bc=p.dp===null||p.dp>=180?'be':p.dp>=90?'bw':'';h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px">${p.uds}</td><td><span class="badge ${bc}">${p.dp===null?'Nunca':p.dp+'d'}</span></td></tr>`;});if(!ip.length)h+=`<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:20px">✅ Nenhum item parado!</td></tr>`;h+=`</tbody></table>`;return h;}
+  if(id==='rel-parados'){const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();const ip=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let dp=null;let uds='Nunca movimentado';if(movs.length){const ul=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});uds=ul.data||'—';const ud=parseDateBR(ul.data);if(ud)dp=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,dp,uds};}).filter(p=>p.dp===null||p.dp>=dias).sort((a,b)=>(b.dp||9999)-(a.dp||9999));const vp=ip.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);let h=`<div class="sumary"><div class="sc"><div class="sl">Itens Parados</div><div class="sv" style="color:#dc2626">${ip.length}</div></div><div class="sc"><div class="sl">Valor Parado</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(vp)}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Localização</th><th class="num">Qtd.</th><th class="num">Valor</th><th>Última Mov.</th><th>Dias</th></tr></thead><tbody>`;ip.forEach(p=>{const bc=p.dp===null||p.dp>=180?'be':p.dp>=90?'bw':'';h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px">${p.uds}</td><td><span class="badge ${bc}">${p.dp===null?'Nunca':p.dp+'d'}</span></td></tr>`;});if(!ip.length)h+=`<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:20px">✅ Nenhum item parado!</td></tr>`;h+=`</tbody></table>`;return h;}
   return '';
 }
 
@@ -3302,9 +3259,7 @@ function confirmarFecharOS(){
   const p=projetos.find(x=>String(x.id)===String(osProjetoId));
   if(!p){fecharModal('modal-os');return;}
   const temPendente=p.materiais&&p.materiais.some(m=>m.status==='separado'&&!m.debitado);
-  if(temPendente){
-    if(!confirm('Existem itens separados ainda não debitados. Deseja fechar mesmo assim?'))return;
-  }
+  if(temPendente){if(!confirm('Existem itens separados ainda não debitados. Deseja fechar mesmo assim?'))return;}
   fecharModal('modal-os');
 }
 function setMatStatus(projId, idx, status){
@@ -3428,29 +3383,7 @@ function imprimirOS(){
   </tbody></table>
   <div class="footer">Muda Paisagismo · OS gerada em ${new Date().toLocaleString('pt-BR')} · Por ${usuarioAtual?.nome||'—'}</div>
   <br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
-  
-<!-- ASSISTENTE IA FLUTUANTE -->
-<div id="ia-btn" onclick="toggleIA()" style="position:fixed;bottom:24px;right:24px;width:52px;height:52px;background:linear-gradient(135deg,#14532d,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px #14532d44;z-index:9990;font-size:22px;transition:transform .2s" title="Assistente IA">✨</div>
-
-<div id="ia-panel" style="display:none;position:fixed;bottom:86px;right:24px;width:360px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 32px #0003;border:1px solid #e5e7eb;z-index:9989;flex-direction:column;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">✨</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:14px">Assistente IA</div>
-        <div style="color:#bbf7d0;font-size:10px">Powered by Claude</div>
-      </div>
-    </div>
-    <button onclick="toggleIA()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
-  </div>
-  <div id="ia-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;min-height:200px"></div>
-  <div style="padding:10px 12px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-    <input id="ia-input" type="text" placeholder="Pergunte sobre o estoque..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:20px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')enviarMsgIA()">
-    <button onclick="enviarMsgIA()" style="background:#16a34a;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-  </div>
-</div>
-
-</body></html>`);
+  </body></html>`);
   win.document.close();
 }
 // ===================== FIM OS =====================
@@ -4265,29 +4198,7 @@ function imprimirEtiqueta(){
   ${p.sku?`<div style="color:#7c3aed;font-size:11px">SKU: ${p.sku}</div>`:''}
   ${p.localizacao?`<div style="color:#6b7280;font-size:11px">📍 ${p.localizacao}</div>`:''}
   <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:120,height:120,colorDark:'#14532d'});
-  setTimeout(()=>window.print(),500);<\/script>
-<!-- ASSISTENTE IA FLUTUANTE -->
-<div id="ia-btn" onclick="toggleIA()" style="position:fixed;bottom:24px;right:24px;width:52px;height:52px;background:linear-gradient(135deg,#14532d,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px #14532d44;z-index:9990;font-size:22px;transition:transform .2s" title="Assistente IA">✨</div>
-
-<div id="ia-panel" style="display:none;position:fixed;bottom:86px;right:24px;width:360px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 32px #0003;border:1px solid #e5e7eb;z-index:9989;flex-direction:column;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">✨</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:14px">Assistente IA</div>
-        <div style="color:#bbf7d0;font-size:10px">Powered by Claude</div>
-      </div>
-    </div>
-    <button onclick="toggleIA()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
-  </div>
-  <div id="ia-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;min-height:200px"></div>
-  <div style="padding:10px 12px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-    <input id="ia-input" type="text" placeholder="Pergunte sobre o estoque..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:20px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')enviarMsgIA()">
-    <button onclick="enviarMsgIA()" style="background:#16a34a;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-  </div>
-</div>
-
-</body></html>`);
+  setTimeout(()=>window.print(),500);<\/script></body></html>`);
   win.document.close();
 }
 
@@ -4300,29 +4211,7 @@ function gerarTodasEtiquetas(){
   <style>body{font-family:Arial}.etiq{display:inline-flex;flex-direction:column;align-items:center;border:1px solid #333;border-radius:6px;padding:8px;margin:4px;width:140px;break-inside:avoid;vertical-align:top}.nome{font-size:9px;font-weight:700;text-align:center;margin-top:5px}.cod{font-size:8px;color:#16a34a;font-weight:700}@media print{button{display:none}}</style></head>
   <body><button onclick="window.print()" style="margin:10px;padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimir Todas</button>
   <div>${itens.map((x,i)=>`<div class="etiq"><div id="qr${i}"></div><div class="nome">${x.p.nome}</div><div class="cod">${x.cod}</div></div>`).join('')}</div>
-  <script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script>
-<!-- ASSISTENTE IA FLUTUANTE -->
-<div id="ia-btn" onclick="toggleIA()" style="position:fixed;bottom:24px;right:24px;width:52px;height:52px;background:linear-gradient(135deg,#14532d,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px #14532d44;z-index:9990;font-size:22px;transition:transform .2s" title="Assistente IA">✨</div>
-
-<div id="ia-panel" style="display:none;position:fixed;bottom:86px;right:24px;width:360px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 32px #0003;border:1px solid #e5e7eb;z-index:9989;flex-direction:column;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">✨</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:14px">Assistente IA</div>
-        <div style="color:#bbf7d0;font-size:10px">Powered by Claude</div>
-      </div>
-    </div>
-    <button onclick="toggleIA()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
-  </div>
-  <div id="ia-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;min-height:200px"></div>
-  <div style="padding:10px 12px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-    <input id="ia-input" type="text" placeholder="Pergunte sobre o estoque..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:20px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')enviarMsgIA()">
-    <button onclick="enviarMsgIA()" style="background:#16a34a;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-  </div>
-</div>
-
-</body></html>`);
+  <script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script></body></html>`);
   win.document.close();
 }
 
@@ -4336,29 +4225,7 @@ function imprimirQRSistema(){
   <div style="font-weight:700;font-size:16px;margin-top:10px;color:#14532d">🌿 Muda Paisagismo</div>
   <div style="font-size:12px;color:#6b7280;margin-top:4px">Sistema ERP — Controle de Estoque</div>
   <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:180,height:180,colorDark:'#14532d'});
-  setTimeout(()=>window.print(),600);<\/script>
-<!-- ASSISTENTE IA FLUTUANTE -->
-<div id="ia-btn" onclick="toggleIA()" style="position:fixed;bottom:24px;right:24px;width:52px;height:52px;background:linear-gradient(135deg,#14532d,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px #14532d44;z-index:9990;font-size:22px;transition:transform .2s" title="Assistente IA">✨</div>
-
-<div id="ia-panel" style="display:none;position:fixed;bottom:86px;right:24px;width:360px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 32px #0003;border:1px solid #e5e7eb;z-index:9989;flex-direction:column;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">✨</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:14px">Assistente IA</div>
-        <div style="color:#bbf7d0;font-size:10px">Powered by Claude</div>
-      </div>
-    </div>
-    <button onclick="toggleIA()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
-  </div>
-  <div id="ia-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;min-height:200px"></div>
-  <div style="padding:10px 12px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-    <input id="ia-input" type="text" placeholder="Pergunte sobre o estoque..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:20px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')enviarMsgIA()">
-    <button onclick="enviarMsgIA()" style="background:#16a34a;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-  </div>
-</div>
-
-</body></html>`);
+  setTimeout(()=>window.print(),600);<\/script></body></html>`);
   win.document.close();
 }
 
@@ -4455,6 +4322,7 @@ document.addEventListener('DOMContentLoaded', async function(){
 });
 // ===================== FIM AUTO-LOGIN =====================
 
+
 // ===================== IMPORTAR PDF =====================
 let pdfItensExtraidos = [];
 let pdfDadosProjeto = {};
@@ -4462,367 +4330,241 @@ let pdfDadosProjeto = {};
 async function processarPDF(event){
   const file = event.target.files[0];
   if(!file) return;
-
-  // Mostrar status
   document.getElementById('pdf-status').style.display = 'block';
   document.getElementById('pdf-dados').style.display = 'none';
   document.getElementById('pdf-resultado').style.display = 'none';
-  document.getElementById('pdf-status-msg').textContent = 'Lendo PDF com IA...';
-  document.getElementById('pdf-spinner').style.display = 'inline-block';
+  document.getElementById('pdf-status-msg').textContent = 'Lendo PDF...';
 
   try {
-    // Converter PDF para base64
-    const base64 = await new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => res(reader.result.split(',')[1]);
-      reader.onerror = rej;
-      reader.readAsDataURL(file);
-    });
-
-    // Preparar lista de produtos do ERP para cruzamento
-    const listaERP = produtos.map(p => p.nome).join('\n');
-
-    // Chamar Claude API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: { type: 'base64', media_type: 'application/pdf', data: base64 }
-            },
-            {
-              type: 'text',
-              text: `Leia este Memorial de Produção e retorne APENAS um JSON válido, sem markdown, sem explicações.
-
-Lista de produtos disponíveis no ERP:
-${listaERP}
-
-Retorne exatamente neste formato:
-{
-  "numero": "número do pedido",
-  "cliente": "nome do cliente",
-  "responsavel": "nome do responsável",
-  "dataEntrega": "data no formato DD/MM/AAAA",
-  "itens": [
-    {
-      "nomePDF": "nome exato como está no PDF",
-      "nomeERP": "nome mais parecido da lista do ERP acima, ou null se não encontrar",
-      "quantidade": 0,
-      "unidade": "unidade"
+    // Ler PDF com PDF.js
+    const arrayBuffer = await file.arrayBuffer();
+    if(typeof pdfjsLib === 'undefined'){
+      throw new Error('PDF.js não carregado. Verifique sua conexão.');
     }
-  ]
-}
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let textoCompleto = '';
+    for(let i = 1; i <= pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      textoCompleto += textContent.items.map(item => item.str).join(' ') + '
+';
+    }
 
-Inclua apenas itens de Produtos e Insumos. Ignore Serviços (HH, Produção, Instalação).`
-            }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const texto = data.content?.[0]?.text || '';
-    
-    // Parsear JSON
-    const resultado = JSON.parse(texto.replace(/```json|```/g, '').trim());
-    
-    // Guardar dados
-    pdfDadosProjeto = resultado;
-    pdfItensExtraidos = resultado.itens || [];
+    // Extrair dados do Memorial de Produção
+    const dados = extrairDadosPDF(textoCompleto);
+    pdfDadosProjeto = dados;
+    pdfItensExtraidos = dados.itens;
 
     // Buscar projeto no ERP
-    const numPedido = resultado.numero || '';
-    const projEncontrado = projetos.find(p => 
-      p.nome && p.nome.includes(numPedido.slice(-4))
-    );
+    const numPedido = dados.numero || '';
+    const sufixo = numPedido.slice(-4);
+    const projEncontrado = projetos.find(p => p.nome && (p.nome === numPedido || p.nome.includes(sufixo)));
 
-    // Preencher dados na tela
-    document.getElementById('pdf-numero').textContent = numPedido;
-    document.getElementById('pdf-cliente').textContent = resultado.cliente || '—';
-    document.getElementById('pdf-resp').textContent = resultado.responsavel || '—';
-    document.getElementById('pdf-entrega').textContent = resultado.dataEntrega || '—';
+    // Preencher dados
+    document.getElementById('pdf-numero').textContent = numPedido || '—';
+    document.getElementById('pdf-cliente').textContent = dados.cliente || '—';
+    document.getElementById('pdf-resp').textContent = dados.responsavel || '—';
+    document.getElementById('pdf-entrega').textContent = dados.dataEntrega || '—';
     document.getElementById('pdf-proj-status').innerHTML = projEncontrado
       ? `<span style="color:#16a34a">✅ ${projEncontrado.nome}</span>`
-      : `<span style="color:#d97706">⚠️ Será criado novo projeto</span>`;
+      : `<span style="color:#d97706">⚠️ Será criado: ${numPedido}</span>`;
 
-    // Montar tabela de itens
+    // Montar tabela
     const tbody = document.getElementById('pdf-itens-body');
     tbody.innerHTML = pdfItensExtraidos.map((item, i) => {
-      const prodERP = item.nomeERP ? produtos.find(p => p.nome === item.nomeERP) : null;
-      const estoque = prodERP ? prodERP.quantidade : null;
-      const statusIcon = item.nomeERP
-        ? (estoque >= item.quantidade ? '✅' : '⚠️')
-        : '❌';
-      const statusTxt = item.nomeERP
-        ? (estoque >= item.quantidade ? 'OK' : `Estoque: ${estoque}`)
-        : 'Não encontrado';
-      const statusCor = item.nomeERP
-        ? (estoque >= item.quantidade ? '#16a34a' : '#d97706')
-        : '#dc2626';
-
+      const prodERP = cruzarComERP(item.nome);
+      const estoque = prodERP ? Number(prodERP.quantidade) : null;
+      const ok = estoque !== null && estoque >= item.quantidade;
+      const statusIcon = prodERP ? (ok ? '✅' : '⚠️') : '❌';
+      const statusTxt = prodERP ? (ok ? 'OK' : `Estoque: ${estoque}`) : 'Não encontrado';
+      const statusCor = prodERP ? (ok ? '#16a34a' : '#d97706') : '#dc2626';
       return `<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:8px 12px;font-size:12px">${item.nomePDF}</td>
+        <td style="padding:8px 12px;font-size:12px">${item.nome}</td>
         <td style="padding:8px 12px">
-          <select style="font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;width:100%" 
-                  id="pdf-sel-${i}" onchange="atualizarItemPDF(${i},this.value)">
+          <select style="font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;width:100%" id="pdf-sel-${i}">
             <option value="">— Não incluir —</option>
-            ${produtos.map(p => `<option value="${p.id}" ${p.nome===item.nomeERP?'selected':''}>${p.nome}</option>`).join('')}
+            ${produtos.map(p => `<option value="${p.id}" ${p.id===(prodERP?.id||'')?'selected':''}>${p.nome}</option>`).join('')}
           </select>
         </td>
         <td style="padding:8px 12px;text-align:center;font-weight:700">${item.quantidade} ${item.unidade}</td>
-        <td style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280">${estoque!==null?estoque+' '+( prodERP?.unidade||''):'—'}</td>
-        <td style="padding:8px 12px;text-align:center;color:${statusCor};font-weight:700">${statusIcon} ${statusTxt}</td>
-        <td style="padding:8px 12px;text-align:center">
-          <input type="checkbox" id="pdf-chk-${i}" ${item.nomeERP?'checked':''} style="width:16px;height:16px;cursor:pointer">
-        </td>
+        <td style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280">${estoque!==null?estoque+' '+(prodERP?.unidade||''):'—'}</td>
+        <td style="padding:8px 12px;text-align:center;color:${statusCor};font-weight:700;font-size:12px">${statusIcon} ${statusTxt}</td>
+        <td style="padding:8px 12px;text-align:center"><input type="checkbox" id="pdf-chk-${i}" ${prodERP?'checked':''} style="width:16px;height:16px"></td>
       </tr>`;
     }).join('');
 
-    // Mostrar resultado
     document.getElementById('pdf-status').style.display = 'none';
     document.getElementById('pdf-dados').style.display = 'block';
 
   } catch(e) {
-    document.getElementById('pdf-status-msg').textContent = '❌ Erro ao processar PDF: ' + e.message;
-    document.getElementById('pdf-spinner').style.display = 'none';
+    document.getElementById('pdf-status-msg').textContent = '❌ Erro: ' + e.message;
   }
 }
 
-function atualizarItemPDF(idx, prodId){
-  if(prodId){
-    const prod = produtos.find(p => p.id == prodId);
-    if(prod) pdfItensExtraidos[idx].nomeERP = prod.nome;
-  } else {
-    pdfItensExtraidos[idx].nomeERP = null;
+function extrairDadosPDF(texto){
+  const linhas = texto.split(/\n|\r/).map(l => l.trim()).filter(l => l);
+  
+  // Extrair campos do cabeçalho
+  const extrair = (label) => {
+    const idx = linhas.findIndex(l => l.toUpperCase().includes(label.toUpperCase()));
+    if(idx > -1 && idx+1 < linhas.length){
+      const proximo = linhas[idx+1].trim();
+      if(proximo && !proximo.toUpperCase().includes('CLIENTE') && 
+         !proximo.toUpperCase().includes('PEDIDO') &&
+         !proximo.toUpperCase().includes('VENDEDOR') &&
+         !proximo.toUpperCase().includes('RESPONSÁVEL')){
+        return proximo;
+      }
+    }
+    return '';
+  };
+
+  const numero = extrair('PEDIDO') || extrair('CLIENTE');
+  const responsavel = extrair('RESPONSÁVEL');
+  const dataEntrega = extrair('DATA DE ENTREGA');
+
+  // Extrair itens — padrão: nome + número + unidade
+  const itens = [];
+  const ignorar = ['PRODUTOS','INSUMOS','SERVIÇOS','SERVIÇOS','ITEM','QUANTIDADE','UNIDADE',
+                   'PRODUÇÃO','INSTALAÇÃO','HH','OBSERVAÇÕES','MEMORIAL','CLIENTE','PEDIDO',
+                   'VENDEDOR','RESPONSÁVEL','DATA','BAIRRO','PRODUTO'];
+  
+  let emSecao = false;
+  for(let i = 0; i < linhas.length; i++){
+    const linha = linhas[i];
+    // Detectar início de seção de itens
+    if(/^(Produtos|Insumos)$/i.test(linha)){ emSecao = true; continue; }
+    if(/^(Serviços|Serviços)$/i.test(linha)){ emSecao = false; continue; }
+    if(!emSecao) continue;
+    
+    // Tentar encontrar padrão: linha com texto + próxima com número + unidade
+    const proxLinha = linhas[i+1]||'';
+    const proxProx = linhas[i+2]||'';
+    
+    // Verificar se próxima linha é um número
+    const num = Number(proxLinha.replace(',','.'));
+    if(!isNaN(num) && num > 0 && proxProx){
+      const nomeItem = linha.trim();
+      if(nomeItem.length > 2 && !ignorar.some(ig => nomeItem.toUpperCase() === ig)){
+        itens.push({
+          nome: nomeItem,
+          quantidade: num,
+          unidade: proxProx.trim()
+        });
+        i += 2;
+      }
+    }
   }
+
+  return { numero, cliente: numero, responsavel, dataEntrega, itens };
+}
+
+function cruzarComERP(nomePDF){
+  if(!nomePDF) return null;
+  const nome = nomePDF.toLowerCase().trim();
+  // Busca exata
+  let prod = produtos.find(p => p.nome.toLowerCase() === nome);
+  if(prod) return prod;
+  // Busca por palavras-chave
+  const palavras = nome.split(/\s+/).filter(p => p.length > 3);
+  let melhor = null, maiorScore = 0;
+  produtos.forEach(p => {
+    const pNome = p.nome.toLowerCase();
+    let score = 0;
+    palavras.forEach(palavra => { if(pNome.includes(palavra)) score++; });
+    if(score > maiorScore){ maiorScore = score; melhor = p; }
+  });
+  return maiorScore >= 2 ? melhor : null;
 }
 
 async function confirmarImportacaoPDF(){
   if(!confirm('Confirmar importação e debitar os itens selecionados do estoque?')) return;
-
   const resp = usuarioAtual?.nome || 'Sistema';
-  let projetoNome = '';
-
-  // Verificar se projeto existe ou criar
   const numPedido = pdfDadosProjeto.numero || '';
-  let projExistente = projetos.find(p => p.nome && p.nome.includes(numPedido.slice(-4)));
+  const sufixo = numPedido.slice(-4);
 
+  // Verificar/criar projeto
+  let projExistente = projetos.find(p => p.nome && (p.nome === numPedido || p.nome.includes(sufixo)));
+  let projetoNome = '';
   if(!projExistente){
-    // Criar projeto novo
     try {
-      const r = await api({
-        action: 'addProjeto',
-        nome: numPedido,
-        cliente: pdfDadosProjeto.cliente || '',
-        responsavel: pdfDadosProjeto.responsavel || '',
-        dataInicio: new Date().toLocaleDateString('pt-BR'),
-        dataEntrega: pdfDadosProjeto.dataEntrega || '',
-        status: 'ativo',
-        obs: 'Criado via importação de PDF',
-        materiais: '[]'
-      });
+      await api({action:'addProjeto', nome:numPedido,
+        cliente:pdfDadosProjeto.cliente||'', responsavel:pdfDadosProjeto.responsavel||'',
+        dataInicio:new Date().toLocaleDateString('pt-BR'),
+        dataEntrega:pdfDadosProjeto.dataEntrega||'',
+        status:'ativo', obs:'Criado via importação de PDF', materiais:'[]'});
       projetoNome = numPedido;
       showToast('Projeto criado: ' + numPedido);
-    } catch(e) {
-      showToast('Erro ao criar projeto.', 'err');
-      return;
-    }
+    } catch(e){ showToast('Erro ao criar projeto.','err'); return; }
   } else {
     projetoNome = projExistente.nome;
   }
 
   // Debitar itens selecionados
-  let ok = 0, err = 0, ignorados = 0;
-  const LOTE = 5;
-
-  const itensSelecionados = pdfItensExtraidos.filter((item, i) => {
+  let ok=0, err=0;
+  const itensSel = pdfItensExtraidos.filter((_,i) => {
     const chk = document.getElementById(`pdf-chk-${i}`);
     const sel = document.getElementById(`pdf-sel-${i}`);
-    return chk?.checked && sel?.value && item.quantidade > 0;
+    return chk?.checked && sel?.value;
   });
 
-  if(!itensSelecionados.length){
-    showToast('Nenhum item selecionado para debitar.', 'err');
-    return;
-  }
+  if(!itensSel.length){ showToast('Nenhum item selecionado.','err'); return; }
 
-  // Progresso
-  document.getElementById('pdf-resultado').style.display = 'block';
-  document.getElementById('pdf-resultado').innerHTML = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;font-size:13px;color:#15803d">
-    ⏳ Debitando ${itensSelecionados.length} item(ns)...
-  </div>`;
+  // Barra progresso
+  document.getElementById('pdf-resultado').style.display='block';
+  document.getElementById('pdf-resultado').innerHTML=`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;font-size:13px;color:#15803d">⏳ Debitando ${itensSel.length} item(ns)...</div>`;
 
-  for(let i = 0; i < pdfItensExtraidos.length; i += LOTE){
-    const lote = pdfItensExtraidos.slice(i, i+LOTE);
-    await Promise.all(lote.map(async (item, li) => {
-      const idx = i + li;
-      const chk = document.getElementById(`pdf-chk-${idx}`);
-      const sel = document.getElementById(`pdf-sel-${idx}`);
-      if(!chk?.checked || !sel?.value) { ignorados++; return; }
-
-      const prod = produtos.find(p => p.id == sel.value);
-      if(!prod) { err++; return; }
-
-      const novaQty = Number(prod.quantidade) - Number(item.quantidade);
-      if(novaQty < 0){ err++; return; }
-
-      try {
+  const LOTE=5;
+  for(let i=0; i<pdfItensExtraidos.length; i+=LOTE){
+    const lote=pdfItensExtraidos.slice(i,i+LOTE);
+    await Promise.all(lote.map(async(item,li)=>{
+      const idx=i+li;
+      const chk=document.getElementById(`pdf-chk-${idx}`);
+      const sel=document.getElementById(`pdf-sel-${idx}`);
+      if(!chk?.checked||!sel?.value)return;
+      const prod=produtos.find(p=>p.id==sel.value);
+      if(!prod){err++;return;}
+      const novaQty=Number(prod.quantidade)-Number(item.quantidade);
+      if(novaQty<0){err++;return;}
+      try{
         await Promise.all([
-          api({action:'editProduto', id:prod.id, nome:prod.nome, sku:prod.sku||'',
-            localizacao:prod.localizacao||'', categoria:prod.categoria,
-            quantidade:novaQty, unidade:prod.unidade,
-            estoqueMinimo:prod.estoqueMinimo||0, estoqueMaximo:prod.estoqueMaximo||0,
-            fornecedor:prod.fornecedor||'', custo:prod.custo||0,
-            descricao:prod.descricao||'', observacoes:prod.observacoes||'',
-            foto:prod.foto||'', codigoInterno:prod.codigoInterno||getCodigo(prod)}),
-          api({action:'addMovimentacao', itemId:prod.id, itemNome:prod.nome,
-            tipo:'saida', quantidade:Number(item.quantidade),
-            motivo:'Saída por importação de PDF',
-            responsavel:resp, projeto:projetoNome,
-            obs:'PDF: ' + pdfDadosProjeto.numero})
+          api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',
+            localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:novaQty,
+            unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,estoqueMaximo:prod.estoqueMaximo||0,
+            fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',
+            observacoes:prod.observacoes||'',foto:prod.foto||'',codigoInterno:prod.codigoInterno||getCodigo(prod)}),
+          api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,
+            tipo:'saida',quantidade:Number(item.quantidade),
+            motivo:'Saída por importação de PDF',responsavel:resp,
+            projeto:projetoNome,obs:'PDF: '+numPedido})
         ]);
         ok++;
-      } catch(e){ err++; }
+      }catch(e){err++;}
     }));
   }
 
-  // Resultado final
-  document.getElementById('pdf-resultado').innerHTML = `
+  document.getElementById('pdf-resultado').innerHTML=`
     <div style="background:${err?'#fffbeb':'#f0fdf4'};border:1px solid ${err?'#fde68a':'#bbf7d0'};border-radius:8px;padding:14px 16px">
       <div style="font-weight:700;font-size:14px;color:${err?'#92400e':'#15803d'}">
         ${err?'⚠️':'✅'} Importação concluída
       </div>
       <div style="font-size:13px;margin-top:6px;color:#374151">
-        ✅ ${ok} item(ns) debitados · 
-        ${err?`❌ ${err} erro(s) · `:''}
-        ${ignorados?`⏭️ ${ignorados} ignorados`:''} · 
-        Projeto: <strong>${projetoNome}</strong>
+        ✅ ${ok} item(ns) debitados${err?` · ❌ ${err} erro(s)`:''} · Projeto: <strong>${projetoNome}</strong>
       </div>
     </div>`;
-
   await carregarDados();
 }
 
 function cancelarImportacaoPDF(){
-  pdfItensExtraidos = [];
-  pdfDadosProjeto = {};
-  document.getElementById('pdf-file-input').value = '';
-  document.getElementById('pdf-dados').style.display = 'none';
-  document.getElementById('pdf-status').style.display = 'none';
-  document.getElementById('pdf-resultado').style.display = 'none';
+  pdfItensExtraidos=[];pdfDadosProjeto={};
+  document.getElementById('pdf-file-input').value='';
+  document.getElementById('pdf-dados').style.display='none';
+  document.getElementById('pdf-status').style.display='none';
+  document.getElementById('pdf-resultado').style.display='none';
 }
 // ===================== FIM IMPORTAR PDF =====================
 
-// ===================== ASSISTENTE IA =====================
-let iaHistorico = [];
-let iaAberto = false;
-
-function toggleIA(){
-  iaAberto = !iaAberto;
-  const panel = document.getElementById('ia-panel');
-  panel.style.display = iaAberto ? 'flex' : 'none';
-  if(iaAberto && iaHistorico.length === 0){
-    adicionarMsgIA('assistant', 'Olá! Sou seu assistente de estoque. Posso responder perguntas sobre itens, quantidades, projetos e movimentações. Como posso ajudar?');
-  }
-  if(iaAberto) setTimeout(()=>document.getElementById('ia-input')?.focus(), 100);
-}
-
-function adicionarMsgIA(tipo, texto){
-  const div = document.getElementById('ia-msgs');
-  const msg = document.createElement('div');
-  msg.style.cssText = tipo === 'user'
-    ? 'background:#f0fdf4;border-radius:12px 12px 2px 12px;padding:8px 12px;font-size:13px;color:#14532d;align-self:flex-end;max-width:85%'
-    : 'background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px 12px 12px 2px;padding:8px 12px;font-size:13px;color:#374151;max-width:90%';
-  msg.textContent = texto;
-  div.appendChild(msg);
-  div.scrollTop = div.scrollHeight;
-}
-
-function adicionarSpinnerIA(){
-  const div = document.getElementById('ia-msgs');
-  const spinner = document.createElement('div');
-  spinner.id = 'ia-spinner';
-  spinner.style.cssText = 'display:flex;gap:4px;align-items:center;padding:8px 12px';
-  spinner.innerHTML = '<span style="width:8px;height:8px;background:#16a34a;border-radius:50%;animation:ia-pulse 0.8s infinite"></span><span style="width:8px;height:8px;background:#16a34a;border-radius:50%;animation:ia-pulse 0.8s 0.2s infinite"></span><span style="width:8px;height:8px;background:#16a34a;border-radius:50%;animation:ia-pulse 0.8s 0.4s infinite"></span>';
-  div.appendChild(spinner);
-  div.scrollTop = div.scrollHeight;
-}
-
-async function enviarMsgIA(){
-  const input = document.getElementById('ia-input');
-  const msg = input.value.trim();
-  if(!msg) return;
-  input.value = '';
-  adicionarMsgIA('user', msg);
-  adicionarSpinnerIA();
-  iaHistorico.push({role:'user', content: msg});
-  const baixoEstoque = produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo));
-  const valorTotal = produtos.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);
-  const top5 = [...produtos].sort((a,b)=>Number(b.quantidade)-Number(a.quantidade)).slice(0,5).map(p=>p.nome+' ('+p.quantidade+' '+p.unidade+')').join(', ');
-  const ctx = `Dados do ERP Muda Paisagismo:
-- Itens em estoque: ${produtos.length}
-- Baixo estoque: ${baixoEstoque.length}${baixoEstoque.length>0?' ('+baixoEstoque.slice(0,3).map(p=>p.nome).join(', ')+(baixoEstoque.length>3?'...':'')+')':''}
-- Movimentações: ${historico.length}
-- Valor total: R$ ${valorTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})}
-- Projetos ativos: ${projetos.filter(p=>p.status==='ativo').length}
-- Top 5 itens por quantidade: ${top5}`;
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:500,
-        system:`Você é assistente de estoque da Muda Paisagismo. Responda em português de forma direta em no máximo 3 frases curtas. Dados:
-
-${ctx}`,
-        messages:iaHistorico
-      })
-    });
-    const data = await response.json();
-    const resposta = data.content?.[0]?.text||'Não consegui processar.';
-    document.getElementById('ia-spinner')?.remove();
-    adicionarMsgIA('assistant', resposta);
-    iaHistorico.push({role:'assistant', content:resposta});
-    if(iaHistorico.length>20) iaHistorico=iaHistorico.slice(-20);
-  } catch(e) {
-    document.getElementById('ia-spinner')?.remove();
-    adicionarMsgIA('assistant','Erro ao conectar. Tente novamente.');
-  }
-}
-const iaStyle=document.createElement('style');
-iaStyle.textContent='@keyframes ia-pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}';
-document.head.appendChild(iaStyle);
-// ===================== FIM ASSISTENTE IA =====================
-
 </script>
-
-<!-- ASSISTENTE IA FLUTUANTE -->
-<div id="ia-btn" onclick="toggleIA()" style="position:fixed;bottom:24px;right:24px;width:52px;height:52px;background:linear-gradient(135deg,#14532d,#16a34a);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px #14532d44;z-index:9990;font-size:22px;transition:transform .2s" title="Assistente IA">✨</div>
-
-<div id="ia-panel" style="display:none;position:fixed;bottom:86px;right:24px;width:360px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 8px 32px #0003;border:1px solid #e5e7eb;z-index:9989;flex-direction:column;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">✨</span>
-      <div>
-        <div style="color:#fff;font-weight:700;font-size:14px">Assistente IA</div>
-        <div style="color:#bbf7d0;font-size:10px">Powered by Claude</div>
-      </div>
-    </div>
-    <button onclick="toggleIA()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
-  </div>
-  <div id="ia-msgs" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;min-height:200px"></div>
-  <div style="padding:10px 12px;border-top:1px solid #e5e7eb;display:flex;gap:8px">
-    <input id="ia-input" type="text" placeholder="Pergunte sobre o estoque..." style="flex:1;padding:8px 12px;border:1.5px solid #d1d5db;border-radius:20px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')enviarMsgIA()">
-    <button onclick="enviarMsgIA()" style="background:#16a34a;color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">▶</button>
-  </div>
-</div>
-
 </body>
 </html>
