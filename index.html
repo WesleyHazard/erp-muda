@@ -4347,8 +4347,7 @@ async function processarPDF(event){
     for(let i = 1; i <= pdf.numPages; i++){
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      textoCompleto += textContent.items.map(item => item.str).join(' ') + '
-';
+      textoCompleto += textContent.items.map(item => item.str).join(' ') + '\n';
     }
 
     // Extrair dados do Memorial de Produção
