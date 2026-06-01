@@ -4341,11 +4341,13 @@ async function processarPDF(event){
   try {
     // Ler PDF com PDF.js
     const arrayBuffer = await file.arrayBuffer();
+    console.log('PDF.js disponível:', typeof pdfjsLib !== 'undefined');
     if(typeof pdfjsLib === 'undefined'){
       throw new Error('PDF.js não carregado. Verifique sua conexão.');
     }
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    console.log('PDF carregado, páginas:', pdf.numPages);
     let textoCompleto = '';
     for(let i = 1; i <= pdf.numPages; i++){
       const page = await pdf.getPage(i);
@@ -4354,7 +4356,9 @@ async function processarPDF(event){
     }
 
     // Extrair dados do Memorial de Produção
+    console.log('Texto extraído (primeiros 500 chars):', textoCompleto.substring(0,500));
     const dados = extrairDadosPDF(textoCompleto);
+    console.log('Dados extraídos:', JSON.stringify(dados));
     pdfDadosProjeto = dados;
     pdfItensExtraidos = dados.itens;
 
