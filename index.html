@@ -1681,7 +1681,7 @@ async function salvarManutencaoSheets(m, id){
       const res = await api({action:'addManutencao', ...m});
       return res.id;
     }
-  }catch(e){ console.log('Erro ao salvar manutenção:', e); }
+  }catch(e){ }
 }
 
 async function deletarManutencaoSheets(id){
@@ -3707,7 +3707,6 @@ async function salvarModulo(){
     await api({action:'criarAbaModulo', id, nome, icon, desc});
     showToast('✅ Aba criada no Google Sheets!');
   }catch(e){
-    console.log('Erro ao criar aba no Sheets:', e);
   }
   
   modulos.push({id, nome, icon, desc, ativo:true});
@@ -4341,13 +4340,11 @@ async function processarPDF(event){
   try {
     // Ler PDF com PDF.js
     const arrayBuffer = await file.arrayBuffer();
-    console.log('PDF.js disponível:', typeof pdfjsLib !== 'undefined');
     if(typeof pdfjsLib === 'undefined'){
       throw new Error('PDF.js não carregado. Verifique sua conexão.');
     }
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-    console.log('PDF carregado, páginas:', pdf.numPages);
     let textoCompleto = '';
     for(let i = 1; i <= pdf.numPages; i++){
       const page = await pdf.getPage(i);
@@ -4356,9 +4353,7 @@ async function processarPDF(event){
     }
 
     // Extrair dados do Memorial de Produção
-    console.log('Texto extraído (primeiros 500 chars):', textoCompleto.substring(0,500));
     const dados = extrairDadosPDF(textoCompleto);
-    console.log('Dados extraídos:', JSON.stringify(dados));
     pdfDadosProjeto = dados;
     pdfItensExtraidos = dados.itens;
 
@@ -4409,45 +4404,48 @@ async function processarPDF(event){
 }
 
 function extrairDadosPDF(texto){
-  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  // O PDF.js retorna texto como uma linha com espaços
+  // Usar regex para extrair dados
 
-  // Extrair campos do cabeçalho
-  const extrairCampo = (label) => {
-    const idx = linhas.findIndex(l => l.toUpperCase() === label.toUpperCase());
-    return (idx > -1 && idx+1 < linhas.length) ? linhas[idx+1] : '';
-  };
+  // Número do pedido
+  const numM = texto.match(/PEDIDO\s+(\d{6,})/);
+  const numero = numM ? numM[1] : '';
 
-  const numero = extrairCampo('PEDIDO') || extrairCampo('CLIENTE');
-  const cliente = extrairCampo('CLIENTE') || numero;
-  const responsavel = extrairCampo('RESPONSÁVEL');
-  const dataEntrega = extrairCampo('DATA DE ENTREGA');
+  // Cliente
+  const cliM = texto.match(/CLIENTE\s+(.+?)\s+PEDIDO/);
+  const cliente = cliM ? cliM[1].trim() : numero;
 
-  // Extrair itens das seções Produtos e Insumos
+  // Responsável
+  const respM = texto.match(/RESPONSÁVEL\s+([A-Za-zÀ-ÿ\s]+?)\s+DATA/);
+  const responsavel = respM ? respM[1].trim() : '';
+
+  // Data de entrega
+  const entM = texto.match(/DATA DE ENTREGA\s+(\d{2}\/\d{2}\/\d{4})/);
+  const dataEntrega = entM ? entM[1] : '';
+
+  // Extrair bloco de itens entre Produtos/Insumos e Serviços
+  const blocoM = texto.match(/Produtos\s+ITEM QUANTIDADE UNIDADE\s+(.+?)\s+Servi[çc]os/s);
   const itens = [];
-  const labelsIgnorar = new Set(['ITEM','QUANTIDADE','UNIDADE','MEMORIAL DE PRODUÇÃO',
-    'CLIENTE','PEDIDO','PRODUTO','VENDEDOR','RESPONSÁVEL','DATA DE EMISSÃO',
-    'DATA DE ENTREGA','BAIRRO','OBSERVAÇÕES']);
-  const unidadesValidas = new Set(['UNIDADE','SACO','PACOTE','KG','G','L','M',
-    'M²','CX','ROLO','HH','PCT','MÇ','MAÇO','HASTE','LITRO','METRO']);
 
-  let emSecao = false;
-  let i = 0;
-  while(i < linhas.length){
-    const linha = linhas[i];
-    if(/^Produtos$/i.test(linha) || /^Insumos$/i.test(linha)){ emSecao=true; i++; continue; }
-    if(/^Servi[çc]os$/i.test(linha) || linha==='OBSERVAÇÕES'){ emSecao=false; i++; continue; }
-    if(!emSecao){ i++; continue; }
-    if(labelsIgnorar.has(linha.toUpperCase())){ i++; continue; }
+  if(blocoM){
+    let bloco = blocoM[1];
+    // Remover cabeçalho de Insumos
+    bloco = bloco.replace(/Insumos\s+ITEM QUANTIDADE UNIDADE\s*/g, ' ');
 
-    const prox = linhas[i+1] || '';
-    const proxprox = linhas[i+2] || '';
-    const num = parseFloat(prox.replace(',','.'));
+    const unidades = 'UNIDADE|SACO|PACOTE|KG|G|L|HH|PCT|ROLO|CX|M²|METRO|LITRO|MAÇO|HASTE|MÇ';
+    const ignorar = new Set(['ITEM','QUANTIDADE','UNIDADE','PRODUTOS','INSUMOS']);
+    const padrao = new RegExp('(.+?)\\s+(\\d+(?:[,.]\\d+)?)\\s+('+unidades+')', 'gi');
 
-    if(!isNaN(num) && num > 0 && unidadesValidas.has(proxprox.toUpperCase())){
-      itens.push({ nome: linha, quantidade: num, unidade: proxprox });
-      i += 3;
-    } else {
-      i++;
+    let m;
+    while((m = padrao.exec(bloco)) !== null){
+      const palavras = m[1].trim().split(/\s+/);
+      while(palavras.length && ignorar.has(palavras[0].toUpperCase())) palavras.shift();
+      const nome = palavras.join(' ').trim();
+      const qty = parseFloat(m[2].replace(',','.'));
+      const un = m[3].toUpperCase();
+      if(nome && qty > 0 && nome.length > 1){
+        itens.push({nome, quantidade: qty, unidade: un});
+      }
     }
   }
 
