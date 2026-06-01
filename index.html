@@ -1262,7 +1262,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     <div id="pdf-status" style="display:none;margin-bottom:16px">
       <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px">
         <div class="spinner"></div>
-        <span id="pdf-status-msg" style="font-size:13px;font-weight:600;color:#15803d">Lendo PDF...</span>
+        <span id="pdf-status-msg" style="font-size:13px;font-weight:600;color:#15803d;flex:1">Lendo PDF...</span>
+        <button onclick="cancelarImportacaoPDF()" style="background:#fee2e2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer">✕ Cancelar</button>
       </div>
     </div>
     <div id="pdf-dados" style="display:none">
@@ -4360,7 +4361,7 @@ async function processarPDF(event){
     // Buscar projeto no ERP
     const numPedido = dados.numero || '';
     const sufixo = numPedido.slice(-4);
-    const projEncontrado = projetos.find(p => p.nome && (p.nome === numPedido || p.nome.includes(sufixo)));
+    const projEncontrado = projetos.find(p => p.nome && (String(p.nome) === numPedido || String(p.nome).includes(sufixo)));
 
     // Preencher dados
     document.getElementById('pdf-numero').textContent = numPedido || '—';
@@ -4486,7 +4487,7 @@ async function confirmarImportacaoPDF(){
   const sufixo = numPedido.slice(-4);
 
   // Verificar/criar projeto
-  let projExistente = projetos.find(p => p.nome && (p.nome === numPedido || p.nome.includes(sufixo)));
+  let projExistente = projetos.find(p => p.nome && (String(p.nome) === numPedido || String(p.nome).includes(sufixo)));
   let projetoNome = '';
   if(!projExistente){
     try {
