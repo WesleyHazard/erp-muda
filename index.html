@@ -4546,15 +4546,24 @@ async function confirmarImportacaoPDF(){
     }));
   }
 
+  // Ocultar botões e mostrar resultado
+  const btnArea = document.querySelector('#sec-importarpdf .card > div:last-of-type');
+  document.getElementById('pdf-resultado').style.display = 'block';
   document.getElementById('pdf-resultado').innerHTML=`
-    <div style="background:${err?'#fffbeb':'#f0fdf4'};border:1px solid ${err?'#fde68a':'#bbf7d0'};border-radius:8px;padding:14px 16px">
+    <div style="background:${err?'#fffbeb':'#f0fdf4'};border:1px solid ${err?'#fde68a':'#bbf7d0'};border-radius:8px;padding:14px 16px;margin-top:12px">
       <div style="font-weight:700;font-size:14px;color:${err?'#92400e':'#15803d'}">
         ${err?'⚠️':'✅'} Importação concluída
       </div>
       <div style="font-size:13px;margin-top:6px;color:#374151">
         ✅ ${ok} item(ns) debitados${err?` · ❌ ${err} erro(s)`:''} · Projeto: <strong>${projetoNome}</strong>
       </div>
+      <div style="margin-top:10px">
+        <button class="btn-gray" onclick="cancelarImportacaoPDF()">🔄 Importar novo PDF</button>
+      </div>
     </div>`;
+  // Ocultar área de itens e botões de confirmar
+  document.getElementById('pdf-itens-body').closest('table').style.display='none';
+  document.querySelector('#pdf-dados > div:last-child').style.display='none';
   await carregarDados();
 }
 
