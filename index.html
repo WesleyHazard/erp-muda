@@ -3586,6 +3586,8 @@ async function carregarModulos(){
     const res = await api({action:'getModulos'});
     if(res && Array.isArray(res) && res.length > 0){
       modulos = res;
+      // Forçar manutenção como inativo
+      modulos = modulos.map(m => m.id === 'manutencao' ? {...m, ativo: false} : m);
       localStorage.setItem('muda_modulos', JSON.stringify(modulos));
     } else {
       // Fall back to localStorage
