@@ -4405,61 +4405,59 @@ async function processarPDF(event){
 }
 
 function extrairDadosPDF(texto){
-  const linhas = texto.split(/\n|\r/).map(l => l.trim()).filter(l => l);
-  
-  // Extrair campos do cabeçalho
-  const extrair = (label) => {
-    const idx = linhas.findIndex(l => l.toUpperCase().includes(label.toUpperCase()));
-    if(idx > -1 && idx+1 < linhas.length){
-      const proximo = linhas[idx+1].trim();
-      if(proximo && !proximo.toUpperCase().includes('CLIENTE') && 
-         !proximo.toUpperCase().includes('PEDIDO') &&
-         !proximo.toUpperCase().includes('VENDEDOR') &&
-         !proximo.toUpperCase().includes('RESPONSÁVEL')){
-        return proximo;
-      }
-    }
-    return '';
-  };
+  // Extrair número do pedido
+  const pedidoMatch = texto.match(/PEDIDO\s+(\d{6,})/);
+  const numero = pedidoMatch ? pedidoMatch[1] : '';
 
-  const numero = extrair('PEDIDO') || extrair('CLIENTE');
-  const responsavel = extrair('RESPONSÁVEL');
-  const dataEntrega = extrair('DATA DE ENTREGA');
+  // Extrair responsável
+  const respMatch = texto.match(/RESPONSÁVEL\s+([A-Za-zÀ-ÿ\s]+?)(?=\s+DATA|\s+BAIRRO|\s+VENDEDOR)/);
+  const responsavel = respMatch ? respMatch[1].trim() : '';
 
-  // Extrair itens — padrão: nome + número + unidade
+  // Extrair data de entrega
+  const entregaMatch = texto.match(/DATA DE ENTREGA\s+(\d{2}\/\d{2}\/\d{4})/);
+  const dataEntrega = entregaMatch ? entregaMatch[1] : '';
+
+  // Extrair cliente
+  const clienteMatch = texto.match(/CLIENTE\s+(.+?)(?=\s+PEDIDO)/s);
+  const cliente = clienteMatch ? clienteMatch[1].trim().replace(/\s+/g,' ') : numero;
+
+  // Extrair itens — apenas de Produtos e Insumos (ignora Serviços)
+  const textoUtil = texto.match(/Produtos\s+ITEM QUANTIDADE UNIDADE\s+(.+?)Servi[çc]os/s);
   const itens = [];
-  const ignorar = ['PRODUTOS','INSUMOS','SERVIÇOS','SERVIÇOS','ITEM','QUANTIDADE','UNIDADE',
-                   'PRODUÇÃO','INSTALAÇÃO','HH','OBSERVAÇÕES','MEMORIAL','CLIENTE','PEDIDO',
-                   'VENDEDOR','RESPONSÁVEL','DATA','BAIRRO','PRODUTO'];
-  
-  let emSecao = false;
-  for(let i = 0; i < linhas.length; i++){
-    const linha = linhas[i];
-    // Detectar início de seção de itens
-    if(/^(Produtos|Insumos)$/i.test(linha)){ emSecao = true; continue; }
-    if(/^(Serviços|Serviços)$/i.test(linha)){ emSecao = false; continue; }
-    if(!emSecao) continue;
-    
-    // Tentar encontrar padrão: linha com texto + próxima com número + unidade
-    const proxLinha = linhas[i+1]||'';
-    const proxProx = linhas[i+2]||'';
-    
-    // Verificar se próxima linha é um número
-    const num = Number(proxLinha.replace(',','.'));
-    if(!isNaN(num) && num > 0 && proxProx){
-      const nomeItem = linha.trim();
-      if(nomeItem.length > 2 && !ignorar.some(ig => nomeItem.toUpperCase() === ig)){
-        itens.push({
-          nome: nomeItem,
-          quantidade: num,
-          unidade: proxProx.trim()
-        });
-        i += 2;
+
+  if(textoUtil){
+    let textoItens = textoUtil[1];
+    // Remover cabeçalho da seção Insumos
+    textoItens = textoItens.replace(/Insumos\s+ITEM QUANTIDADE UNIDADE\s*/g, ' ');
+
+    const ignorar = new Set(['ITEM','QUANTIDADE','UNIDADE','SACO','PACOTE','PRODUTOS',
+      'INSUMOS','SERVIÇOS','OBSERVAÇÕES','PRODUTO','VENDEDOR','CLIENTE','PEDIDO',
+      'RESPONSÁVEL','BAIRRO','MEMORIAL','DE','PRODUÇÃO','MAÇO','HASTE','ROLO']);
+
+    // Encontrar todos os padrões: número + unidade
+    const matches = [...textoItens.matchAll(/(\d+)\s+(UNIDADE|SACO|PACOTE|MA[ÇC]O|HASTE|PCT|ROLO|LITRO|KG|METRO|PACOTE)/g)];
+
+    let posAnterior = 0;
+    matches.forEach(m => {
+      const nomeRaw = textoItens.substring(posAnterior, m.index).trim();
+      const qty = parseInt(m[1]);
+      const un = m[2];
+      posAnterior = m.index + m[0].length;
+
+      // Limpar nome — remover palavras de cabeçalho do início
+      const palavras = nomeRaw.split(/\s+/);
+      while(palavras.length && ignorar.has(palavras[0].toUpperCase())){
+        palavras.shift();
       }
-    }
+      const nome = palavras.join(' ').trim();
+
+      if(nome && qty > 0 && nome.length > 2){
+        itens.push({nome, quantidade: qty, unidade: un});
+      }
+    });
   }
 
-  return { numero, cliente: numero, responsavel, dataEntrega, itens };
+  return { numero, cliente, responsavel, dataEntrega, itens };
 }
 
 function cruzarComERP(nomePDF){
