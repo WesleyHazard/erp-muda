@@ -4405,56 +4405,46 @@ async function processarPDF(event){
 }
 
 function extrairDadosPDF(texto){
-  // Extrair número do pedido
-  const pedidoMatch = texto.match(/PEDIDO\s+(\d{6,})/);
-  const numero = pedidoMatch ? pedidoMatch[1] : '';
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // Extrair responsável
-  const respMatch = texto.match(/RESPONSÁVEL\s+([A-Za-zÀ-ÿ\s]+?)(?=\s+DATA|\s+BAIRRO|\s+VENDEDOR)/);
-  const responsavel = respMatch ? respMatch[1].trim() : '';
+  // Extrair campos do cabeçalho
+  const extrairCampo = (label) => {
+    const idx = linhas.findIndex(l => l.toUpperCase() === label.toUpperCase());
+    return (idx > -1 && idx+1 < linhas.length) ? linhas[idx+1] : '';
+  };
 
-  // Extrair data de entrega
-  const entregaMatch = texto.match(/DATA DE ENTREGA\s+(\d{2}\/\d{2}\/\d{4})/);
-  const dataEntrega = entregaMatch ? entregaMatch[1] : '';
+  const numero = extrairCampo('PEDIDO') || extrairCampo('CLIENTE');
+  const cliente = extrairCampo('CLIENTE') || numero;
+  const responsavel = extrairCampo('RESPONSÁVEL');
+  const dataEntrega = extrairCampo('DATA DE ENTREGA');
 
-  // Extrair cliente
-  const clienteMatch = texto.match(/CLIENTE\s+(.+?)(?=\s+PEDIDO)/s);
-  const cliente = clienteMatch ? clienteMatch[1].trim().replace(/\s+/g,' ') : numero;
-
-  // Extrair itens — apenas de Produtos e Insumos (ignora Serviços)
-  const textoUtil = texto.match(/Produtos\s+ITEM QUANTIDADE UNIDADE\s+(.+?)Servi[çc]os/s);
+  // Extrair itens das seções Produtos e Insumos
   const itens = [];
+  const labelsIgnorar = new Set(['ITEM','QUANTIDADE','UNIDADE','MEMORIAL DE PRODUÇÃO',
+    'CLIENTE','PEDIDO','PRODUTO','VENDEDOR','RESPONSÁVEL','DATA DE EMISSÃO',
+    'DATA DE ENTREGA','BAIRRO','OBSERVAÇÕES']);
+  const unidadesValidas = new Set(['UNIDADE','SACO','PACOTE','KG','G','L','M',
+    'M²','CX','ROLO','HH','PCT','MÇ','MAÇO','HASTE','LITRO','METRO']);
 
-  if(textoUtil){
-    let textoItens = textoUtil[1];
-    // Remover cabeçalho da seção Insumos
-    textoItens = textoItens.replace(/Insumos\s+ITEM QUANTIDADE UNIDADE\s*/g, ' ');
+  let emSecao = false;
+  let i = 0;
+  while(i < linhas.length){
+    const linha = linhas[i];
+    if(/^Produtos$/i.test(linha) || /^Insumos$/i.test(linha)){ emSecao=true; i++; continue; }
+    if(/^Servi[çc]os$/i.test(linha) || linha==='OBSERVAÇÕES'){ emSecao=false; i++; continue; }
+    if(!emSecao){ i++; continue; }
+    if(labelsIgnorar.has(linha.toUpperCase())){ i++; continue; }
 
-    const ignorar = new Set(['ITEM','QUANTIDADE','UNIDADE','SACO','PACOTE','PRODUTOS',
-      'INSUMOS','SERVIÇOS','OBSERVAÇÕES','PRODUTO','VENDEDOR','CLIENTE','PEDIDO',
-      'RESPONSÁVEL','BAIRRO','MEMORIAL','DE','PRODUÇÃO','MAÇO','HASTE','ROLO']);
+    const prox = linhas[i+1] || '';
+    const proxprox = linhas[i+2] || '';
+    const num = parseFloat(prox.replace(',','.'));
 
-    // Encontrar todos os padrões: número + unidade
-    const matches = [...textoItens.matchAll(/(\d+)\s+(UNIDADE|SACO|PACOTE|MA[ÇC]O|HASTE|PCT|ROLO|LITRO|KG|METRO|PACOTE)/g)];
-
-    let posAnterior = 0;
-    matches.forEach(m => {
-      const nomeRaw = textoItens.substring(posAnterior, m.index).trim();
-      const qty = parseInt(m[1]);
-      const un = m[2];
-      posAnterior = m.index + m[0].length;
-
-      // Limpar nome — remover palavras de cabeçalho do início
-      const palavras = nomeRaw.split(/\s+/);
-      while(palavras.length && ignorar.has(palavras[0].toUpperCase())){
-        palavras.shift();
-      }
-      const nome = palavras.join(' ').trim();
-
-      if(nome && qty > 0 && nome.length > 2){
-        itens.push({nome, quantidade: qty, unidade: un});
-      }
-    });
+    if(!isNaN(num) && num > 0 && unidadesValidas.has(proxprox.toUpperCase())){
+      itens.push({ nome: linha, quantidade: num, unidade: proxprox });
+      i += 3;
+    } else {
+      i++;
+    }
   }
 
   return { numero, cliente, responsavel, dataEntrega, itens };
@@ -4559,9 +4549,9 @@ async function confirmarImportacaoPDF(){
         <button class="btn-gray" onclick="cancelarImportacaoPDF()">🔄 Importar novo PDF</button>
       </div>
     </div>`;
-  // Ocultar área de itens e botões de confirmar
-  document.getElementById('pdf-itens-body').closest('table').style.display='none';
-  document.querySelector('#pdf-dados > div:last-child').style.display='none';
+  // Ocultar toda a seção de dados e mostrar só o resultado
+  document.getElementById('pdf-dados').style.display='none';
+  document.getElementById('pdf-resultado').style.display='block';
   await carregarDados();
 }
 
