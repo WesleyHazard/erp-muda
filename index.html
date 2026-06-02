@@ -3263,6 +3263,44 @@ function confirmarFecharOS(){
   if(temPendente){if(!confirm('Existem itens separados ainda não debitados. Deseja fechar mesmo assim?'))return;}
   fecharModal('modal-os');
 }
+
+async function devolverItemEstoque(projId, idx){
+  const p = projetos.find(x=>String(x.id)===String(projId));
+  if(!p||!p.materiais) return;
+  const mat = p.materiais[idx];
+  if(!mat.debitado || !mat.itemId) return; // Não foi debitado, não precisa devolver
+  const prod = produtos.find(x=>String(x.id)===String(mat.itemId));
+  if(!prod) return;
+  const qtyDevolver = Number(mat.qtyDebitada || mat.qty);
+  try{
+    const nova = Number(prod.quantidade) + qtyDevolver;
+    await api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:nova,unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,estoqueMaximo:prod.estoqueMaximo||0,fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',observacoes:prod.observacoes||'',foto:prod.foto||'',codigoInterno:prod.codigoInterno||getCodigo(prod)});
+    await api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,tipo:'entrada',quantidade:qtyDevolver,motivo:'Devolução',responsavel:usuarioAtual?.nome||'—',projeto:p.nome,obs:'Devolução ao remover da OS'});
+    showToast(`↩️ ${qtyDevolver} ${prod.unidade} devolvidos ao estoque`);
+  }catch(e){ /* silencioso */ }
+}
+
+async function ajustarEstoqueOS(projId, idx, novaQty){
+  // Chamada quando a quantidade de um item debitado é alterada na OS
+  const p = projetos.find(x=>String(x.id)===String(projId));
+  if(!p||!p.materiais) return;
+  const mat = p.materiais[idx];
+  if(!mat.debitado || !mat.itemId) return; // Não foi debitado, sem ajuste
+  const prod = produtos.find(x=>String(x.id)===String(mat.itemId));
+  if(!prod) return;
+  const qtyAnterior = Number(mat.qtyDebitada || mat.qty);
+  const diff = qtyAnterior - Number(novaQty); // positivo = devolver, negativo = debitar mais
+  if(diff === 0) return;
+  try{
+    const novoEstoque = Number(prod.quantidade) + diff;
+    if(novoEstoque < 0){ showToast('Estoque insuficiente para essa quantidade.','err'); return; }
+    await api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:novoEstoque,unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,estoqueMaximo:prod.estoqueMaximo||0,fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',observacoes:prod.observacoes||'',foto:prod.foto||'',codigoInterno:prod.codigoInterno||getCodigo(prod)});
+    await api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,tipo:diff>0?'entrada':'saida',quantidade:Math.abs(diff),motivo:diff>0?'Devolução':'Projeto de cliente',responsavel:usuarioAtual?.nome||'—',projeto:p.nome,obs:'Ajuste de quantidade na OS'});
+    mat.qtyDebitada = Number(novaQty);
+    showToast(diff>0?`↩️ ${diff} ${prod.unidade} devolvidos ao estoque`:`📤 ${Math.abs(diff)} ${prod.unidade} debitados adicionalmente`);
+    await carregarDados();
+  }catch(e){ showToast('Erro ao ajustar estoque.','err'); }
+}
 function setMatStatus(projId, idx, status){
   const p = projetos.find(x => String(x.id) === String(projId));
   if(!p || !p.materiais) return;
@@ -3290,8 +3328,12 @@ function removerMat(projId, idx){
   if(!confirm('Remover este material?')) return;
   const p = projetos.find(x => String(x.id) === String(projId));
   if(!p) return;
+  const mat = p.materiais[idx];
+  // Se já foi debitado, devolver ao estoque
+  if(mat.debitado && mat.itemId){
+    devolverItemEstoque(projId, idx);
+  }
   p.materiais.splice(idx, 1);
-  // sync to sheets in background
   try{const _p=projetos.find(x=>String(x.id)===String(osProjetoId)||String(x.id)===String(orcamentoProjetoId));if(_p)syncProjetoSheets(_p);}catch(e){}
   renderMateriais(p);
   renderProjetos();
@@ -3978,13 +4020,14 @@ async function debitarItemEstoque(projId, idx){
   if(!confirm(`Debitar ${mat.qty} ${mat.unidade} de "${mat.nome}" do estoque?`)) return;
   try{
     const nova = Number(prod.quantidade) - Number(mat.qty);
-    await api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:nova,unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',foto:prod.foto||''});
-    await api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,tipo:'saida',quantidade:mat.qty,motivo:'Projeto de cliente',responsavel:usuarioAtual?.nome||'—',projeto:p.nome,obs:'Débito automático via OS'});
+    await api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:nova,unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,estoqueMaximo:prod.estoqueMaximo||0,fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',observacoes:prod.observacoes||'',foto:prod.foto||'',codigoInterno:prod.codigoInterno||getCodigo(prod)});
+    await api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,tipo:'saida',quantidade:mat.qty,motivo:'Projeto de cliente',responsavel:usuarioAtual?.nome||'—',projeto:p.nome,obs:'Débito via OS'});
     mat.debitado = true;
+    mat.qtyDebitada = Number(mat.qty);
     syncProjetoSheets(p);
     renderMateriais(p);
     await carregarDados();
-    showToast('✅ Debitado do estoque com sucesso!');
+    showToast('✅ Debitado com sucesso!');
     registrarLog('movimentacao',`Débito OS: ${mat.nome} (${mat.qty} ${mat.unidade}) → ${p.nome}`,'📤');
   }catch(e){ showToast('Erro ao debitar.','err'); }
 }
@@ -4142,7 +4185,12 @@ function editarQtyMat(projId, idx, val){
   if(!qty || qty <= 0){ showToast('Quantidade inválida.','err'); return; }
   const p = projetos.find(x=>String(x.id)===String(projId));
   if(!p || !p.materiais) return;
-  p.materiais[idx].qty = qty;
+  const mat = p.materiais[idx];
+  // Se já foi debitado, ajustar estoque com a diferença
+  if(mat.debitado && mat.itemId){
+    ajustarEstoqueOS(projId, idx, qty);
+  }
+  mat.qty = qty;
   renderMateriais(p);
   renderProjetos();
   syncProjetoSheets(p);
@@ -4475,15 +4523,17 @@ function cruzarComERP(nomePDF){
 }
 
 async function confirmarImportacaoPDF(){
-  if(!confirm('Confirmar importação e debitar os itens selecionados do estoque?')) return;
+  if(!confirm('Confirmar criação do projeto e adição dos materiais na OS?')) return;
   const resp = usuarioAtual?.nome || 'Sistema';
   const numPedido = pdfDadosProjeto.numero || '';
   const sufixo = numPedido.slice(-4);
 
   // Verificar/criar projeto
-  let projExistente = projetos.find(p => p.nome && (String(p.nome) === numPedido || String(p.nome).includes(sufixo)));
+  await carregarDados();
+  let proj = projetos.find(p => String(p.nome) === numPedido || String(p.nome).includes(sufixo));
   let projetoNome = '';
-  if(!projExistente){
+
+  if(!proj){
     try {
       await api({action:'addProjeto', nome:numPedido,
         cliente:pdfDadosProjeto.cliente||'', responsavel:pdfDadosProjeto.responsavel||'',
@@ -4492,79 +4542,41 @@ async function confirmarImportacaoPDF(){
         status:'ativo', obs:'Criado via importação de PDF', materiais:'[]'});
       projetoNome = numPedido;
       showToast('Projeto criado: ' + numPedido);
+      await carregarDados();
+      proj = projetos.find(p => String(p.nome) === numPedido);
     } catch(e){ showToast('Erro ao criar projeto.','err'); return; }
   } else {
-    projetoNome = projExistente.nome;
+    projetoNome = proj.nome;
   }
 
-  // Debitar itens selecionados
-  let ok=0, err=0;
-  const itensSel = pdfItensExtraidos.filter((_,i) => {
+  // Coletar itens selecionados
+  const itensSel = [];
+  for(let i=0; i<pdfItensExtraidos.length; i++){
     const chk = document.getElementById(`pdf-chk-${i}`);
     const sel = document.getElementById(`pdf-sel-${i}`);
-    return chk?.checked && sel?.value;
-  });
+    if(!chk?.checked || !sel?.value) continue;
+    const prod = produtos.find(p => p.id == sel.value);
+    if(!prod) continue;
+    const item = pdfItensExtraidos[i];
+    itensSel.push({
+      nome: prod.nome,
+      qty: Number(item.quantidade),
+      unidade: prod.unidade,
+      obs: '',
+      itemId: prod.id,
+      estoqueAtual: Number(prod.quantidade),
+      status: 'pendente',
+      debitado: false
+    });
+  }
 
   if(!itensSel.length){ showToast('Nenhum item selecionado.','err'); return; }
 
-  // Barra progresso
-  document.getElementById('pdf-resultado').style.display='block';
-  document.getElementById('pdf-resultado').innerHTML=`<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;font-size:13px;color:#15803d">⏳ Debitando ${itensSel.length} item(ns)...</div>`;
-
-  const LOTE=5;
-  for(let i=0; i<pdfItensExtraidos.length; i+=LOTE){
-    const lote=pdfItensExtraidos.slice(i,i+LOTE);
-    await Promise.all(lote.map(async(item,li)=>{
-      const idx=i+li;
-      const chk=document.getElementById(`pdf-chk-${idx}`);
-      const sel=document.getElementById(`pdf-sel-${idx}`);
-      if(!chk?.checked||!sel?.value)return;
-      const prod=produtos.find(p=>p.id==sel.value);
-      if(!prod){err++;return;}
-      const novaQty=Number(prod.quantidade)-Number(item.quantidade);
-      if(novaQty<0){err++;return;}
-      try{
-        await Promise.all([
-          api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',
-            localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:novaQty,
-            unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,estoqueMaximo:prod.estoqueMaximo||0,
-            fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',
-            observacoes:prod.observacoes||'',foto:prod.foto||'',codigoInterno:prod.codigoInterno||getCodigo(prod)}),
-          api({action:'addMovimentacao',itemId:prod.id,itemNome:prod.nome,
-            tipo:'saida',quantidade:Number(item.quantidade),
-            motivo:'Saída por importação de PDF',responsavel:resp,
-            projeto:projetoNome,obs:'PDF: '+numPedido})
-        ]);
-        ok++;
-      }catch(e){err++;}
-    }));
-  }
-
-  // Adicionar materiais à OS do projeto
+  // Adicionar materiais à OS do projeto — SEM debitar
   try {
-    await carregarDados(); // Recarregar para ter o projeto atualizado
-    const proj = projetos.find(p => String(p.nome) === projetoNome || String(p.nome).includes(projetoNome.slice(-4)));
     if(proj){
       const materiaisAtuais = proj.materiais || [];
-      // Adicionar itens debitados como materiais da OS
-      for(let i=0; i<pdfItensExtraidos.length; i++){
-        const chk = document.getElementById(`pdf-chk-${i}`);
-        const sel = document.getElementById(`pdf-sel-${i}`);
-        if(!chk?.checked || !sel?.value) continue;
-        const prod = produtos.find(p => p.id == sel.value);
-        if(!prod) continue;
-        const item = pdfItensExtraidos[i];
-        materiaisAtuais.push({
-          nome: prod.nome,
-          qty: Number(item.quantidade),
-          unidade: prod.unidade,
-          obs: '',
-          itemId: prod.id,
-          estoqueAtual: Number(prod.quantidade) - Number(item.quantidade),
-          status: 'separado',
-          debitado: true
-        });
-      }
+      const todosMateriais = [...materiaisAtuais, ...itensSel];
       await api({
         action: 'editProjeto',
         id: proj.id,
@@ -4575,29 +4587,26 @@ async function confirmarImportacaoPDF(){
         dataEntrega: proj.dataEntrega || '',
         status: proj.status || 'ativo',
         obs: proj.obs || '',
-        materiais: JSON.stringify(materiaisAtuais)
+        materiais: JSON.stringify(todosMateriais)
       });
     }
-  } catch(e){ /* silencioso */ }
+  } catch(e){ showToast('Erro ao salvar materiais.','err'); return; }
 
-  // Ocultar botões e mostrar resultado
-  const btnArea = document.querySelector('#sec-importarpdf .card > div:last-of-type');
-  document.getElementById('pdf-resultado').style.display = 'block';
-  document.getElementById('pdf-resultado').innerHTML=`
-    <div style="background:${err?'#fffbeb':'#f0fdf4'};border:1px solid ${err?'#fde68a':'#bbf7d0'};border-radius:8px;padding:14px 16px;margin-top:12px">
-      <div style="font-weight:700;font-size:14px;color:${err?'#92400e':'#15803d'}">
-        ${err?'⚠️':'✅'} Importação concluída
-      </div>
-      <div style="font-size:13px;margin-top:6px;color:#374151">
-        ✅ ${ok} item(ns) debitados${err?` · ❌ ${err} erro(s)`:''} · Projeto: <strong>${projetoNome}</strong>
-      </div>
-      <div style="margin-top:10px">
-        <button class="btn-gray" onclick="cancelarImportacaoPDF()">🔄 Importar novo PDF</button>
-      </div>
-    </div>`;
-  // Ocultar toda a seção de dados e mostrar só o resultado
+  // Mostrar resultado
   document.getElementById('pdf-dados').style.display='none';
   document.getElementById('pdf-resultado').style.display='block';
+  document.getElementById('pdf-resultado').innerHTML=`
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-top:12px">
+      <div style="font-weight:700;font-size:14px;color:#15803d">✅ Projeto criado com sucesso!</div>
+      <div style="font-size:13px;margin-top:6px;color:#374151">
+        📋 ${itensSel.length} item(ns) adicionados à OS do projeto <strong>${projetoNome}</strong>.<br>
+        <span style="color:#d97706">⚠️ Os itens ainda não foram debitados do estoque. Acesse a OS em Projetos para debitar.</span>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn-green" onclick="switchTab('projetos',document.getElementById('tab-proj'));cancelarImportacaoPDF()">🏗️ Ir para Projetos</button>
+        <button class="btn-gray" style="margin-left:8px" onclick="cancelarImportacaoPDF()">🔄 Importar novo PDF</button>
+      </div>
+    </div>`;
   await carregarDados();
 }
 
