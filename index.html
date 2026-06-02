@@ -4540,6 +4540,46 @@ async function confirmarImportacaoPDF(){
     }));
   }
 
+  // Adicionar materiais à OS do projeto
+  try {
+    await carregarDados(); // Recarregar para ter o projeto atualizado
+    const proj = projetos.find(p => String(p.nome) === projetoNome || String(p.nome).includes(projetoNome.slice(-4)));
+    if(proj){
+      const materiaisAtuais = proj.materiais || [];
+      // Adicionar itens debitados como materiais da OS
+      for(let i=0; i<pdfItensExtraidos.length; i++){
+        const chk = document.getElementById(`pdf-chk-${i}`);
+        const sel = document.getElementById(`pdf-sel-${i}`);
+        if(!chk?.checked || !sel?.value) continue;
+        const prod = produtos.find(p => p.id == sel.value);
+        if(!prod) continue;
+        const item = pdfItensExtraidos[i];
+        materiaisAtuais.push({
+          nome: prod.nome,
+          qty: Number(item.quantidade),
+          unidade: prod.unidade,
+          obs: '',
+          itemId: prod.id,
+          estoqueAtual: Number(prod.quantidade) - Number(item.quantidade),
+          status: 'separado',
+          debitado: true
+        });
+      }
+      await api({
+        action: 'editProjeto',
+        id: proj.id,
+        nome: proj.nome,
+        cliente: proj.cliente || '',
+        responsavel: proj.responsavel || '',
+        dataInicio: proj.dataInicio || '',
+        dataEntrega: proj.dataEntrega || '',
+        status: proj.status || 'ativo',
+        obs: proj.obs || '',
+        materiais: JSON.stringify(materiaisAtuais)
+      });
+    }
+  } catch(e){ /* silencioso */ }
+
   // Ocultar botões e mostrar resultado
   const btnArea = document.querySelector('#sec-importarpdf .card > div:last-of-type');
   document.getElementById('pdf-resultado').style.display = 'block';
