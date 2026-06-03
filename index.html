@@ -2431,7 +2431,7 @@ async function salvarProjeto(){
     popularMovSels();
   }catch(e){showToast('Erro ao salvar projeto.','err');}
 }
-async async function deletarProj(id){
+async function deletarProj(id){
   const p = projetos.find(x=>String(x.id)===String(id));
   if(!p) return;
   if(!confirm(`Excluir o projeto "${p.nome}"?`)) return;
