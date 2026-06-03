@@ -1164,10 +1164,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
           <option value="entrada">▲ Apenas Entradas</option>
           <option value="saida">▼ Apenas Saídas</option>
         </select>
+        <input type="text" class="sel" id="rg-busca" placeholder="🔍 Buscar item..." oninput="renderRelGeral()" style="min-width:180px">
       </div>
       <div class="rel-summary" id="rg-summary"></div>
       <div style="overflow-x:auto"><table class="rel-table">
-        <thead><tr><th>Data</th><th>Tipo</th><th>Código</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Quantidade</th></tr></thead>
+        <thead><tr><th>Código</th><th>Item</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo</th></tr></thead>
         <tbody id="rg-body"></tbody>
       </table></div>
     </div>
@@ -1181,6 +1182,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <button class="btn-green" onclick="imprimirRelatorio('rel-porprojeto-print')">🖨️ Imprimir / PDF</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <input type="text" class="sel" id="rpp-busca" placeholder="🔍 Buscar item..." oninput="renderRelPorProjeto()" style="min-width:180px">
         <select class="sel" id="rpp-proj" onchange="renderRelPorProjeto()" style="min-width:200px">
           <option value="">Todos os projetos</option>
         </select>
@@ -1189,7 +1191,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       </div>
       <div class="rel-summary" id="rpp-summary"></div>
       <div style="overflow-x:auto"><table class="rel-table">
-        <thead><tr><th>Projeto</th><th>Item</th><th>Código</th><th>Data</th><th>Responsável</th><th>Motivo</th><th class="num">Quantidade</th></tr></thead>
+        <thead><tr><th>Item</th><th>Código</th><th></th><th class="num">Total Saída</th></tr></thead>
         <tbody id="rpp-body"></tbody>
       </table></div>
     </div>
@@ -2429,15 +2431,45 @@ async function salvarProjeto(){
     popularMovSels();
   }catch(e){showToast('Erro ao salvar projeto.','err');}
 }
-async function deletarProj(id){
-  if(!confirm('Remover?'))return;
-  // Remove locally and re-render immediately
-  projetos=projetos.filter(p=>String(p.id)!==String(id));
-  renderProjetos();
-  showToast('Removido.');
+async async function deletarProj(id){
+  const p = projetos.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  if(!confirm(`Excluir o projeto "${p.nome}"?`)) return;
+
+  // Perguntar se quer devolver materiais ao estoque
+  const mats = (p.materiais||[]).filter(m=>m.debitado && m.itemId);
+  let devolver = false;
+  if(mats.length > 0){
+    devolver = confirm(`Este projeto tem ${mats.length} item(ns) debitado(s).\nDeseja devolver ao estoque?`);
+  }
+
+  // Devolver ao estoque se solicitado
+  if(devolver){
+    for(const mat of mats){
+      const prod = produtos.find(x=>String(x.id)===String(mat.itemId));
+      if(!prod) continue;
+      const novaQty = Number(prod.quantidade) + Number(mat.qtyDebitada||mat.qty);
+      try{
+        await api({action:'editProduto',id:prod.id,nome:prod.nome,sku:prod.sku||'',
+          localizacao:prod.localizacao||'',categoria:prod.categoria,quantidade:novaQty,
+          unidade:prod.unidade,estoqueMinimo:prod.estoqueMinimo||0,estoqueMaximo:prod.estoqueMaximo||0,
+          fornecedor:prod.fornecedor||'',custo:prod.custo||0,descricao:prod.descricao||'',
+          observacoes:prod.observacoes||'',foto:prod.foto||'',codigoInterno:prod.codigoInterno||getCodigo(prod)});
+      }catch(e){}
+    }
+    showToast('↩️ Materiais devolvidos ao estoque!');
+  }
+
+  // Apagar movimentações do projeto no Sheets
+  try{ await api({action:'deleteMovimentacoesProjeto', projeto: p.nome}); }catch(e){}
+
+  // Deletar projeto
+  try{ await api({action:'deleteProjeto', id}); }catch(e){}
+
   registrarLog('exclusao','Projeto removido','🗑️');
-  // Sync to Sheets in background
-  try{await api({action:'deleteProjeto',id});}catch(e){showToast('Erro ao sincronizar.','err');}
+  await carregarDados();
+  renderProjetos();
+  showToast('Projeto excluído!');
 }
 
 function renderFornecedores(){
@@ -2620,81 +2652,122 @@ function renderRelGeral(){
   const deStr=document.getElementById('rg-de')?.value;
   const ateStr=document.getElementById('rg-ate')?.value;
   const tipo=document.getElementById('rg-tipo')?.value||'';
+  const busca=(document.getElementById('rg-busca')?.value||'').toLowerCase();
   const de=deStr?new Date(deStr+'T00:00:00'):null;
   const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
+
   const fil=historico.filter(h=>{
     if(tipo&&h.tipo!==tipo)return false;
+    if(busca&&!(h.itemNome||'').toLowerCase().includes(busca))return false;
     const d=parseDateBR(h.data)||new Date(h.data);
-    if(de&&d<de)return false;
-    if(ate&&d>ate)return false;
+    if(de&&d&&d<de)return false;
+    if(ate&&d&&d>ate)return false;
     return true;
-  }).sort((a,b)=>new Date(b.data)-new Date(a.data));
+  });
+
+  // Agrupar por item
+  const grupos={};
+  fil.forEach(h=>{
+    const key=h.itemId||h.itemNome;
+    if(!grupos[key]){
+      const prod=produtos.find(p=>String(p.id)===String(h.itemId));
+      grupos[key]={
+        nome:h.itemNome,
+        cod:prod?.codigoInterno||getCodigo(prod||{nome:h.itemNome,categoria:'',id:h.itemId})||'—',
+        entradas:0, saidas:0
+      };
+    }
+    if(h.tipo==='entrada') grupos[key].entradas+=Number(h.quantidade);
+    else grupos[key].saidas+=Number(h.quantidade);
+  });
+
+  const lista=Object.values(grupos).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const te=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);
   const ts=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);
+
   document.getElementById('rg-summary').innerHTML=`
-    <div class="rel-sum-card"><div class="rel-sum-label">Registros</div><div class="rel-sum-val">${fil.length}</div></div>
+    <div class="rel-sum-card"><div class="rel-sum-label">Itens distintos</div><div class="rel-sum-val">${lista.length}</div></div>
     <div class="rel-sum-card" style="border-left:4px solid #16a34a"><div class="rel-sum-label">Total Entradas</div><div class="rel-sum-val">+${fmtN(te)}</div></div>
     <div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(ts)}</div></div>`;
-  document.getElementById('rg-body').innerHTML=fil.length?fil.map(h=>{
-    const prod=produtos.find(p=>String(p.id)===String(h.itemId));
-    const cod=prod?.codigoInterno||h.codigoInterno||getCodigo(prod||{nome:h.itemNome,categoria:'',id:h.itemId})||'—';
-    return`<tr>
-      <td style="font-size:11px;color:#6b7280">${formatarDataLegivel(h.data)}</td>
-      <td><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td>
-      <td><span class="ic-code">${cod}</span></td>
-      <td style="font-weight:600">${h.itemNome}</td>
-      <td>${h.responsavel||'—'}</td>
-      <td>${h.projeto&&h.projeto!=='—'?h.projeto:'—'}</td>
-      <td style="font-size:11px;color:#6b7280">${h.motivo||'—'}</td>
-      <td class="num" style="color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</td>
-    </tr>`;
-  }).join(''):'<tr><td colspan="8" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>';
+
+  document.getElementById('rg-body').innerHTML=lista.length?lista.map(g=>`<tr>
+    <td><span class="ic-code">${g.cod}</span></td>
+    <td style="font-weight:600">${g.nome}</td>
+    <td class="num" style="color:#16a34a;font-weight:700">${g.entradas>0?'+'+fmtN(g.entradas):'—'}</td>
+    <td class="num" style="color:#dc2626;font-weight:700">${g.saidas>0?'-'+fmtN(g.saidas):'—'}</td>
+    <td class="num" style="font-weight:700;color:${g.entradas-g.saidas>=0?'#16a34a':'#dc2626'}">${g.entradas-g.saidas>=0?'+':''}${fmtN(g.entradas-g.saidas)}</td>
+  </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>';
 }
 
+
 function renderRelPorProjeto(){
-  // Popular select de projetos
   const rpp=document.getElementById('rpp-proj');
   if(rpp){
     const curr=rpp.value;
     rpp.innerHTML='<option value="">Todos os projetos</option>';
-    const nomesProj=new Set([...projetos.map(p=>p.nome).filter(Boolean),...historico.map(h=>h.projeto).filter(p=>p&&p!=='—')]);
+    const nomesProj=new Set([...projetos.map(p=>String(p.nome)).filter(Boolean),...historico.map(h=>h.projeto).filter(p=>p&&p!=='—')]);
     [...nomesProj].sort().forEach(p=>rpp.innerHTML+=`<option value="${p}">${p}</option>`);
     if(curr)rpp.value=curr;
   }
   const proj=document.getElementById('rpp-proj')?.value||'';
   const deStr=document.getElementById('rpp-de')?.value;
   const ateStr=document.getElementById('rpp-ate')?.value;
+  const busca=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
   const de=deStr?new Date(deStr+'T00:00:00'):null;
   const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
+
   const fil=historico.filter(h=>{
     if(h.tipo!=='saida')return false;
     if(proj&&h.projeto!==proj)return false;
     if(!h.projeto||h.projeto==='—')return false;
+    if(busca&&!(h.itemNome||'').toLowerCase().includes(busca))return false;
     const d=parseDateBR(h.data)||new Date(h.data);
-    if(de&&d<de)return false;
-    if(ate&&d>ate)return false;
+    if(de&&d&&d<de)return false;
+    if(ate&&d&&d>ate)return false;
     return true;
-  }).sort((a,b)=>(a.projeto||'').localeCompare(b.projeto||'')||new Date(b.data)-new Date(a.data));
-  const projetos_unicos=[...new Set(fil.map(h=>h.projeto))];
+  });
+
+  // Agrupar por projeto e por item
+  const gruposProjeto={};
+  fil.forEach(h=>{
+    if(!gruposProjeto[h.projeto]) gruposProjeto[h.projeto]={};
+    const key=h.itemId||h.itemNome;
+    if(!gruposProjeto[h.projeto][key]){
+      const prod=produtos.find(p=>String(p.id)===String(h.itemId));
+      gruposProjeto[h.projeto][key]={nome:h.itemNome, cod:prod?.codigoInterno||'—', total:0};
+    }
+    gruposProjeto[h.projeto][key].total+=Number(h.quantidade);
+  });
+
+  const projetos_unicos=Object.keys(gruposProjeto).sort();
   const total=fil.reduce((a,h)=>a+Number(h.quantidade),0);
+
   document.getElementById('rpp-summary').innerHTML=`
-    <div class="rel-sum-card"><div class="rel-sum-label">Registros de Saída</div><div class="rel-sum-val">${fil.length}</div></div>
     <div class="rel-sum-card"><div class="rel-sum-label">Projetos</div><div class="rel-sum-val" style="color:#7c3aed">${projetos_unicos.length}</div></div>
     <div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas (qtd.)</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(total)}</div></div>`;
-  document.getElementById('rpp-body').innerHTML=fil.length?fil.map(h=>{
-    const prod=produtos.find(p=>String(p.id)===String(h.itemId));
-    const cod=prod?.codigoInterno||h.codigoInterno||'—';
-    return`<tr>
-      <td style="font-weight:600;color:#7c3aed">${h.projeto}</td>
-      <td>${h.itemNome}</td>
-      <td><span class="ic-code">${cod}</span></td>
-      <td style="font-size:11px;color:#6b7280">${formatarDataLegivel(h.data)}</td>
-      <td>${h.responsavel||'—'}</td>
-      <td style="font-size:11px">${h.motivo||'—'}</td>
-      <td class="num" style="color:#dc2626;font-weight:700">-${h.quantidade}</td>
-    </tr>`;
-  }).join(''):'<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma saída vinculada a projetos.</td></tr>';
+
+  if(!projetos_unicos.length){
+    document.getElementById('rpp-body').innerHTML='<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma saída vinculada a projetos.</td></tr>';
+    return;
+  }
+
+  let html='';
+  projetos_unicos.forEach(projNome=>{
+    const itens=Object.values(gruposProjeto[projNome]).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+    const totalProj=itens.reduce((a,i)=>a+i.total,0);
+    html+=`<tr style="background:#f0fdf4"><td colspan="3" style="font-weight:800;color:#14532d;padding:10px 12px">🏗️ ${projNome}</td><td class="num" style="font-weight:800;color:#dc2626;padding:10px 12px">-${fmtN(totalProj)}</td></tr>`;
+    itens.forEach(item=>{
+      html+=`<tr>
+        <td style="padding-left:24px;font-weight:600">${item.nome}</td>
+        <td><span class="ic-code">${item.cod}</span></td>
+        <td></td>
+        <td class="num" style="color:#dc2626;font-weight:700">-${fmtN(item.total)}</td>
+      </tr>`;
+    });
+  });
+  document.getElementById('rpp-body').innerHTML=html;
 }
+
 
 let inventarioContagens={};
 
@@ -2961,8 +3034,9 @@ function renderRelMovPeriodo(){
 }
 
 function renderRelParados(){
-  const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();
-  const itensParados=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let diasParado=null;let ultimaDataStr='Nunca movimentado';if(movs.length){const ultima=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});ultimaDataStr=ultima.data||'—';const ud=parseDateBR(ultima.data);if(ud)diasParado=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,diasParado,ultimaDataStr};}).filter(p=>p.diasParado===null||p.diasParado>=dias).sort((a,b)=>(b.diasParado||9999)-(a.diasParado||9999));
+  const dias=Number(document.getElementById('rpar-dias')?.value||30);
+  const buscaPar=(document.getElementById('rpar-busca')?.value||'').toLowerCase();const hoje=new Date();
+  const itensParados=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let diasParado=null;let ultimaDataStr='Nunca movimentado';if(movs.length){const ultima=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});ultimaDataStr=ultima.data||'—';const ud=parseDateBR(ultima.data);if(ud)diasParado=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,diasParado,ultimaDataStr};}).filter(p=>(p.diasParado===null||p.diasParado>=dias)&&(!buscaPar||p.nome.toLowerCase().includes(buscaPar))).sort((a,b)=>(b.diasParado||9999)-(a.diasParado||9999));
   const valorParado=itensParados.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);
   document.getElementById('rpar-summary').innerHTML=`<div class="rel-sum-card"><div class="rel-sum-label">Itens Parados (+${dias}d)</div><div class="rel-sum-val" style="color:#dc2626">${itensParados.length}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Valor Parado</div><div class="rel-sum-val" style="color:#ca8a04;font-size:16px">R$ ${fmt(valorParado)}</div></div>`;
   document.getElementById('rpar-body').innerHTML=itensParados.length?itensParados.map(p=>{const d=p.diasParado;const bc=d===null||d>=180?'critico':d>=90?'atencao':'';return`<tr><td style="font-weight:600">${p.nome}</td><td><span style="font-size:11px">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</span></td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px;color:#6b7280">${p.ultimaDataStr}</td><td><span class="parado-badge ${bc}">${d===null?'Nunca mov.':d+'d'}</span></td></tr>`;}).join(''):'<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:24px">✅ Nenhum item parado!</td></tr>';
