@@ -1056,7 +1056,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
             <option value="estrutura">🔩 Estrutura</option>
             <option value="ferramentas">🛠️ Ferramentas</option>
           </select>
-          <button class="btn-green" onclick="imprimirRelatorio('rel-valor-print')">🖨️ Imprimir / PDF</button>
+          <button class="btn-red" style="font-size:12px" onclick="limparHistoricoRel()">🗑️ Limpar Histórico</button>
+        <button class="btn-green" onclick="imprimirRelatorio('rel-valor-print')">🖨️ Imprimir / PDF</button>
         </div>
       </div>
       <div class="rel-summary" id="rv-summary"></div>
@@ -2710,6 +2711,7 @@ function renderRelPorProjeto(){
     if(curr)rpp.value=curr;
   }
   const proj=document.getElementById('rpp-proj')?.value||'';
+  const buscaPP=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
   const deStr=document.getElementById('rpp-de')?.value;
   const ateStr=document.getElementById('rpp-ate')?.value;
   const busca=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
@@ -2720,6 +2722,7 @@ function renderRelPorProjeto(){
     if(h.tipo!=='saida')return false;
     if(proj&&h.projeto!==proj)return false;
     if(!h.projeto||h.projeto==='—')return false;
+    if(buscaPP&&!(h.itemNome||'').toLowerCase().includes(buscaPP))return false;
     if(busca&&!(h.itemNome||'').toLowerCase().includes(busca))return false;
     const d=parseDateBR(h.data)||new Date(h.data);
     if(de&&d&&d<de)return false;
@@ -4692,6 +4695,19 @@ function cancelarImportacaoPDF(){
   document.getElementById('pdf-resultado').style.display='none';
 }
 // ===================== FIM IMPORTAR PDF =====================
+
+async function limparHistoricoRel(){
+  if(!pode('admin')) return showToast('Apenas administradores podem limpar o histórico.','err');
+  if(!confirm('⚠️ Isso apagará TODAS as movimentações do histórico permanentemente.\nTem certeza?')) return;
+  if(!confirm('Confirme novamente: apagar TODO o histórico?')) return;
+  try{
+    await api({action:'limparHistorico'});
+    historico = [];
+    showToast('✅ Histórico limpo com sucesso!');
+    renderDashboard();
+    initRelatorios();
+  }catch(e){ showToast('Erro ao limpar histórico.','err'); }
+}
 
 </script>
 </body>
