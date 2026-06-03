@@ -1112,6 +1112,10 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
           <option value="entrada">▲ Entradas</option>
           <option value="saida">▼ Saídas</option>
         </select>
+        <select class="sel" id="rp-modo" onchange="renderRelMovPeriodo()">
+          <option value="detalhado">📋 Detalhado</option>
+          <option value="agrupado">📊 Agrupado por Item</option>
+        </select>
         <input type="text" class="sel" id="rp-item-busca" placeholder="🔍 Buscar item..." oninput="renderRelMovPeriodo()" style="min-width:180px">
         <input type="text" class="sel" id="rp-resp-busca" placeholder="👤 Responsável..." oninput="renderRelMovPeriodo()" style="min-width:150px">
       </div>
@@ -1169,7 +1173,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       </div>
       <div class="rel-summary" id="rg-summary"></div>
       <div style="overflow-x:auto"><table class="rel-table">
-        <thead><tr><th>Código</th><th>Item</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo</th></tr></thead>
+        <thead><tr><th>Código</th><th>Item</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo em Estoque</th></tr></thead>
         <tbody id="rg-body"></tbody>
       </table></div>
     </div>
@@ -1645,17 +1649,7 @@ function mostrarDetalhesFornModal(f, itensForn){
   document.getElementById('mfd-title').textContent = '🏭 ' + f.nome;
   document.getElementById('mfd-edit-btn').onclick = () => { fecharModal('modal-forn-det'); abrirModalForn(f.id); };
   
-  document.getElementById('mfd-content').innerHTML = `
-    <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">
-      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px">
-        ${f.tel?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">TELEFONE</div><div>📞 ${f.tel}</div></div>`:''}
-        ${f.email?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">E-MAIL</div><div>✉️ ${f.email}</div></div>`:''}
-        ${cat?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">CATEGORIA</div><div>${cat.icon} ${cat.label}</div></div>`:''}
-      </div>
-      ${f.obs?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #bbf7d0;font-size:12px;color:#6b7280">📝 ${f.obs}</div>`:''}
-    </div>
-    <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Itens cadastrados (${itensForn.length})</div>
-    ${itensForn.length ? itensForn.map(p=>`
+  document.getElementById('mfd-content').innerHTML = `     <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">       <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px">         ${f.tel?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">TELEFONE</div><div>📞 ${f.tel}</div></div>`:''}         ${f.email?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">E-MAIL</div><div>✉️ ${f.email}</div></div>`:''}         ${cat?`<div><div style="font-size:10px;color:#6b7280;font-weight:700;margin-bottom:2px">CATEGORIA</div><div>${cat.icon} ${cat.label}</div></div>`:''}       </div>       ${f.obs?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid #bbf7d0;font-size:12px;color:#6b7280">📝 ${f.obs}</div>`:''}     </div>     <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Itens cadastrados (${itensForn.length})</div>     ${itensForn.length ? itensForn.map(p=>`
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
         <span>${CATS[p.categoria]?.icon||''} ${p.nome}</span>
         <span style="font-weight:700;color:#16a34a">${p.quantidade} ${p.unidade}</span>
@@ -1700,37 +1694,7 @@ function renderModuloManutencao(){
   const totalFuncionando = manutencoes.filter(m=>m.status==='funcionando').length;
   const totalProblema = manutencoes.filter(m=>m.status!=='funcionando').length;
   
-  return `<div>
-    <div class="toolbar" style="margin-bottom:12px">
-      <div class="sw"><span class="sw-icon">🔍</span><input id="man-search" placeholder="Buscar equipamento..." oninput="filtrarManutencao()"></div>
-      <select class="sel" id="man-status-filter" onchange="filtrarManutencao()">
-        <option value="">Todos status</option>
-        <option value="funcionando">✅ Funcionando</option>
-        <option value="manutencao">🔧 Em Manutenção</option>
-        <option value="aguardando">⏳ Aguardando Peça</option>
-        <option value="quebrado">❌ Quebrado</option>
-      </select>
-      <select class="sel" id="man-ord" onchange="filtrarManutencao()">
-        <option value="az">A→Z</option>
-        <option value="za">Z→A</option>
-        <option value="data">Mais recente</option>
-      </select>
-    </div>
-    <div class="stats" style="margin-bottom:14px">
-      <div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">${manutencoes.length}</div><div class="stat-sub">equipamentos</div></div></div>
-      <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Funcionando</div><div class="stat-value" style="color:#16a34a">${totalFuncionando}</div></div></div>
-      <div class="stat-card" style="border-left-color:#dc2626"><div class="stat-icon">⚠️</div><div><div class="stat-label">Com Problema</div><div class="stat-value" style="color:#dc2626">${totalProblema}</div></div></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div style="font-weight:700;font-size:14px;color:#14532d">🔧 Equipamentos e Ferramentas</div>
-      <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>
-    </div>
-    <div id="lista-manutencao">
-    ${manutencoes.length ? manutencoes.map((m,i)=>{
-      const hoje = new Date();
-      const proxima = m.proxima ? new Date(m.proxima+'T00:00:00') : null;
-      const vencida = proxima && proxima < hoje && m.status === 'funcionando';
-      return `<div class="man-card" onclick="abrirModalManutencao(${i})">
+  return `<div>     <div class="toolbar" style="margin-bottom:12px">       <div class="sw"><span class="sw-icon">🔍</span><input id="man-search" placeholder="Buscar equipamento..." oninput="filtrarManutencao()"></div>       <select class="sel" id="man-status-filter" onchange="filtrarManutencao()">         <option value="">Todos status</option>         <option value="funcionando">✅ Funcionando</option>         <option value="manutencao">🔧 Em Manutenção</option>         <option value="aguardando">⏳ Aguardando Peça</option>         <option value="quebrado">❌ Quebrado</option>       </select>       <select class="sel" id="man-ord" onchange="filtrarManutencao()">         <option value="az">A→Z</option>         <option value="za">Z→A</option>         <option value="data">Mais recente</option>       </select>     </div>     <div class="stats" style="margin-bottom:14px">       <div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">${manutencoes.length}</div><div class="stat-sub">equipamentos</div></div></div>       <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Funcionando</div><div class="stat-value" style="color:#16a34a">${totalFuncionando}</div></div></div>       <div class="stat-card" style="border-left-color:#dc2626"><div class="stat-icon">⚠️</div><div><div class="stat-label">Com Problema</div><div class="stat-value" style="color:#dc2626">${totalProblema}</div></div></div>     </div>     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">       <div style="font-weight:700;font-size:14px;color:#14532d">🔧 Equipamentos e Ferramentas</div>       <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>     </div>     <div id="lista-manutencao">     ${manutencoes.length ? manutencoes.map((m,i)=>{       const hoje = new Date();       const proxima = m.proxima ? new Date(m.proxima+'T00:00:00') : null;       const vencida = proxima && proxima < hoje && m.status === 'funcionando';       return `<div class="man-card" onclick="abrirModalManutencao(${i})">
         <div class="man-tipo-icon">${tipoIcon[m.tipo]||'📦'}</div>
         <div style="flex:1">
           <div style="font-weight:700;font-size:13px">${m.equipamento}</div>
@@ -1746,10 +1710,7 @@ function renderModuloManutencao(){
           <span class="man-status ${statusCls[m.status]||''}">${statusLabel[m.status]||m.status}</span>
           ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();removerManutencao(${i})">🗑️</button>`:''}
         </div>
-      </div>`;
-    }).join('') : '<div class="empty">Nenhum equipamento cadastrado. Clique em "+ Novo Registro".</div>'}
-    </div>
-  </div>`;
+      </div>`;     }).join('') : '<div class="empty">Nenhum equipamento cadastrado. Clique em "+ Novo Registro".</div>'}     </div>   </div>`;
 }
 
 function abrirModalManutencao(idx){
@@ -1841,14 +1802,7 @@ function renderNotifs(){
   const lista=document.getElementById('notif-lista');
   if(notificacoes.length>0){badge.style.display='flex';badge.textContent=notificacoes.length>9?'9+':notificacoes.length;}
   else{badge.style.display='none';}
-  lista.innerHTML=notificacoes.length?notificacoes.map(n=>`
-    <div class="notif-item notif-${n.tipo}" ${n.aba?`onclick="navegarNotif('${n.aba}')" style="cursor:pointer"`:''}> 
-      <div class="notif-icon">${n.icon}</div>
-      <div class="notif-body">
-        <div class="notif-msg">${n.msg}</div>
-        <div class="notif-time">${n.time}${n.aba?' · Clique para ver':''}</div>
-      </div>
-    </div>`).join(''):'<div class="notif-empty">Nenhuma notificação</div>';
+  lista.innerHTML=notificacoes.length?notificacoes.map(n=>`     <div class="notif-item notif-${n.tipo}" ${n.aba?`onclick="navegarNotif('${n.aba}')" style="cursor:pointer"`:''}>        <div class="notif-icon">${n.icon}</div>       <div class="notif-body">         <div class="notif-msg">${n.msg}</div>         <div class="notif-time">${n.time}${n.aba?' · Clique para ver':''}</div>       </div>     </div>`).join(''):'<div class="notif-empty">Nenhuma notificação</div>';
 }
 
 function navegarNotif(aba){
@@ -2013,24 +1967,7 @@ function renderEstoque(){
   el.innerHTML=fil.map(p=>{
     const low=p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo);
     const c=CATS[p.categoria];const cod=getCodigo(p);
-    return `<div class="item-card ${low?'low':''}">
-      ${col('col-foto')?`<div class="ic-foto">${p.foto?`<img src="${p.foto}" alt="">`:c?.icon||'📦'}</div>`:''}
-      <div class="ic-info"><div class="ic-nome">${p.nome}</div>
-        ${col('col-loc')&&p.localizacao?`<div class="ic-loc">📍 ${p.localizacao}</div>`:''}
-        <div class="ic-codes">
-          ${col('col-codigo')?`<span class="ic-code" style="font-size:11px;font-weight:800">🏷️ ${cod}</span>`:''}
-          ${col('col-sku')&&p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}
-        </div>
-        <div class="ic-meta">${col('col-forn')&&p.fornecedor?`<span>🏭 ${p.fornecedor}</span>`:''}${col('col-custo')&&Number(p.custo)>0?`<span>💰 R$ ${Number(p.custo).toFixed(2)}</span>`:''}${col('col-desc')&&p.descricao?`<span>📝 ${p.descricao}</span>`:''}${p.observacoes?`<span style="color:#d97706">💬 ${p.observacoes}</span>`:''}</div>
-      </div>
-      ${col('col-cat')?`<span class="pill ${low?'low':''}">${c?.label||p.categoria}</span>`:''}
-      <div class="ic-qty"><div class="ic-qty-val ${low?'low':''}">${p.quantidade}</div><div class="ic-qty-unit">${p.unidade}</div>${col('col-min')&&p.estoqueMinimo>0?`<div style="font-size:9px;color:${low?'#dc2626':'#9ca3af'}">${low?'⚠️':'✅'} mín:${p.estoqueMinimo}</div>`:''} ${p.estoqueMaximo>0?`<div class="est-max-badge">máx:${p.estoqueMaximo}</div>`:''}</div>
-      <div class="ic-actions">
-        ${pode('editar')?`<button class="btn-in" onclick="abrirMovRapida('${p.id}','entrada')">▲</button><button class="btn-out" onclick="abrirMovRapida('${p.id}','saida')">▼</button>`:''}
-        ${pode('editar')?`<button class="btn-blue" onclick="editarItem('${p.id}')">✏️</button>`:''}
-        ${pode('qr')?`<button class="btn-qr" onclick="abrirQR('${p.id}')">QR</button>`:''}
-        ${pode('deletar')?`<button class="btn-red" onclick="deletarItem('${p.id}')">🗑️</button>`:''}
-      </div></div>`;
+    return `<div class="item-card ${low?'low':''}">       ${col('col-foto')?`<div class="ic-foto">${p.foto?`<img src="${p.foto}" alt="">`:c?.icon||'📦'}</div>`:''}       <div class="ic-info"><div class="ic-nome">${p.nome}</div>         ${col('col-loc')&&p.localizacao?`<div class="ic-loc">📍 ${p.localizacao}</div>`:''}         <div class="ic-codes">           ${col('col-codigo')?`<span class="ic-code" style="font-size:11px;font-weight:800">🏷️ ${cod}</span>`:''}           ${col('col-sku')&&p.sku?`<span class="ic-sku">SKU: ${p.sku}</span>`:''}         </div>         <div class="ic-meta">${col('col-forn')&&p.fornecedor?`<span>🏭 ${p.fornecedor}</span>`:''}${col('col-custo')&&Number(p.custo)>0?`<span>💰 R$ ${Number(p.custo).toFixed(2)}</span>`:''}${col('col-desc')&&p.descricao?`<span>📝 ${p.descricao}</span>`:''}${p.observacoes?`<span style="color:#d97706">💬 ${p.observacoes}</span>`:''}</div>       </div>       ${col('col-cat')?`<span class="pill ${low?'low':''}">${c?.label||p.categoria}</span>`:''}       <div class="ic-qty"><div class="ic-qty-val ${low?'low':''}">${p.quantidade}</div><div class="ic-qty-unit">${p.unidade}</div>${col('col-min')&&p.estoqueMinimo>0?`<div style="font-size:9px;color:${low?'#dc2626':'#9ca3af'}">${low?'⚠️':'✅'} mín:${p.estoqueMinimo}</div>`:''} ${p.estoqueMaximo>0?`<div class="est-max-badge">máx:${p.estoqueMaximo}</div>`:''}</div>       <div class="ic-actions">         ${pode('editar')?`<button class="btn-in" onclick="abrirMovRapida('${p.id}','entrada')">▲</button><button class="btn-out" onclick="abrirMovRapida('${p.id}','saida')">▼</button>`:''}         ${pode('editar')?`<button class="btn-blue" onclick="editarItem('${p.id}')">✏️</button>`:''}         ${pode('qr')?`<button class="btn-qr" onclick="abrirQR('${p.id}')">QR</button>`:''}         ${pode('deletar')?`<button class="btn-red" onclick="deletarItem('${p.id}')">🗑️</button>`:''}       </div></div>`;
   }).join('');
 }
 function toggleForm(){if(!pode('cadastrar'))return showToast('Sem permissão.','err');const f=document.getElementById('form-item');f.style.display=f.style.display==='none'?'block':'none';if(f.style.display==='block'){editItemId=null;fotoBase64=null;limparForm();}}
@@ -2086,16 +2023,7 @@ async function filtrarItens(){
   ).slice(0,8);
   dd.innerHTML = res.length ? res.map(p => {
     const low = p.estoqueMinimo>0 && Number(p.quantidade)<=Number(p.estoqueMinimo);
-    return `<div class="idd-opt" onclick="selecionarItemMov('${p.id}')">
-      <div style="font-weight:600">${p.nome}</div>
-      <div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap">
-        <span style="font-size:10px;color:#16a34a;font-weight:700">${getCodigo(p)}</span>
-        ${p.sku?`<span style="font-size:10px;color:#7c3aed">SKU:${p.sku}</span>`:''}
-        <span style="font-size:10px;color:${low?'#dc2626':'#6b7280'};font-weight:${low?'700':'400'}">
-          ${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}
-        </span>
-      </div>
-    </div>`;
+    return `<div class="idd-opt" onclick="selecionarItemMov('${p.id}')">       <div style="font-weight:600">${p.nome}</div>       <div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap">         <span style="font-size:10px;color:#16a34a;font-weight:700">${getCodigo(p)}</span>         ${p.sku?`<span style="font-size:10px;color:#7c3aed">SKU:${p.sku}</span>`:''}         <span style="font-size:10px;color:${low?'#dc2626':'#6b7280'};font-weight:${low?'700':'400'}">           ${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}         </span>       </div>     </div>`;
   }).join('') : '<div class="idd-opt" style="color:#9ca3af">Nenhum item encontrado</div>';
   dd.classList.add('open');
 }
@@ -2110,11 +2038,7 @@ function selecionarItemMov(id){
   sc.style.display = 'block';
   const low = p.estoqueMinimo>0 && Number(p.quantidade)<=Number(p.estoqueMinimo);
   document.getElementById('isc-nome').textContent = p.nome;
-  document.getElementById('isc-info').innerHTML = `
-    <span style="color:${low?'#dc2626':'#16a34a'};font-weight:700">${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}</span>
-    <span style="color:#6b7280">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}</span>
-    <span class="ic-code">${getCodigo(p)}</span>
-    ${p.localizacao?`<span style="color:#7c3aed;font-size:10px">📍 ${p.localizacao}</span>`:''}`;
+  document.getElementById('isc-info').innerHTML = `     <span style="color:${low?'#dc2626':'#16a34a'};font-weight:700">${low?'⚠️':''} Saldo: ${p.quantidade} ${p.unidade}</span>     <span style="color:#6b7280">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}</span>     <span class="ic-code">${getCodigo(p)}</span>     ${p.localizacao?`<span style="color:#7c3aed;font-size:10px">📍 ${p.localizacao}</span>`:''}`;
 }
 
 function fecharDrop(){ document.getElementById('mov-drop').classList.remove('open'); }
@@ -2168,23 +2092,14 @@ async function salvarMovTab(){
 function renderMovHistResumo(){
   const el = document.getElementById('mov-hist');
   if(!el) return;
-  el.innerHTML = historico.length ? historico.slice(0,5).map(h=>`
-    <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
-      <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span>
-      <span style="flex:1">${h.itemNome}</span>
-      <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span>
-    </div>`).join('') : '<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';
+  el.innerHTML = historico.length ? historico.slice(0,5).map(h=>`     <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">       <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span>       <span style="flex:1">${h.itemNome}</span>       <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span>     </div>`).join('') : '<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';
 }
 
 function renderMovBaixo(){
   const el = document.getElementById('mov-baixo');
   if(!el) return;
   const baixo = produtos.filter(p => p.estoqueMinimo>0 && Number(p.quantidade)<=Number(p.estoqueMinimo));
-  el.innerHTML = baixo.length ? baixo.slice(0,4).map(p=>`
-    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #fee2e2;font-size:12px">
-      <span>${p.nome}</span>
-      <span style="font-weight:700;color:#dc2626">${p.quantidade} ${p.unidade}</span>
-    </div>`).join('') : '<div style="color:#16a34a;font-size:13px">✅ Todos em conformidade!</div>';
+  el.innerHTML = baixo.length ? baixo.slice(0,4).map(p=>`     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #fee2e2;font-size:12px">       <span>${p.nome}</span>       <span style="font-weight:700;color:#dc2626">${p.quantidade} ${p.unidade}</span>     </div>`).join('') : '<div style="color:#16a34a;font-size:13px">✅ Todos em conformidade!</div>';
 }
 
 function popularMovSels(){
@@ -2261,22 +2176,7 @@ let _histFiltradoCompleto = [];
 function verMaisHistorico(){
   const el = document.getElementById('lista-historico');
   if(!_histFiltradoCompleto.length) return;
-  el.innerHTML = _histFiltradoCompleto.map(h=>`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-    <div style="font-size:16px;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};padding-top:2px">${h.tipo==='entrada'?'▲':'▼'}</div>
-    <div style="flex:1;min-width:120px">
-      <div style="font-weight:700;font-size:13px">${h.itemNome}</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
-        ${h.motivo&&h.motivo!=='—'?'<span>📌 '+h.motivo+'</span>':''}
-        ${h.projeto&&h.projeto!=='—'?'<span>🏗️ '+h.projeto+'</span>':''}
-        ${h.obs?'<span>💬 '+h.obs+'</span>':''}
-      </div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-weight:800;font-size:14px;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</div>
-      <div style="font-size:11px;color:#9ca3af">👤 ${h.responsavel}</div>
-      <div style="font-size:10px;color:#9ca3af">${h.data}</div>
-    </div>
-  </div>`).join('');
+  el.innerHTML = _histFiltradoCompleto.map(h=>`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px">     <div style="font-size:16px;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};padding-top:2px">${h.tipo==='entrada'?'▲':'▼'}</div>     <div style="flex:1;min-width:120px">       <div style="font-weight:700;font-size:13px">${h.itemNome}</div>       <div style="font-size:11px;color:#9ca3af;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">         ${h.motivo&&h.motivo!=='—'?'<span>📌 '+h.motivo+'</span>':''}         ${h.projeto&&h.projeto!=='—'?'<span>🏗️ '+h.projeto+'</span>':''}         ${h.obs?'<span>💬 '+h.obs+'</span>':''}       </div>     </div>     <div style="text-align:right">       <div style="font-weight:800;font-size:14px;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</div>       <div style="font-size:11px;color:#9ca3af">👤 ${h.responsavel}</div>       <div style="font-size:10px;color:#9ca3af">${h.data}</div>     </div>   </div>`).join('');
 }
 
 function renderReposicao(){const q=document.getElementById('rep-search')?.value.toLowerCase()||'';const cat=document.getElementById('rep-cat')?.value||'';const showForn=document.getElementById('rcol-forn')?.checked!==false;const showLoc=document.getElementById('rcol-loc')?.checked!==false;const showFalta=document.getElementById('rcol-falta')?.checked!==false;const baixo=produtos.filter(p=>p.estoqueMinimo>0&&Number(p.quantidade)<=Number(p.estoqueMinimo)&&(!cat||p.categoria===cat)&&(p.nome.toLowerCase().includes(q)));document.getElementById('lista-reposicao').innerHTML=baixo.length?baixo.map(p=>`<div class="repos-item"><div><div style="font-weight:600;font-size:13px">${p.nome}</div><div style="font-size:11px;color:#9ca3af">${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label}${showForn&&p.fornecedor?' · 🏭 '+p.fornecedor:''} ${showLoc&&p.localizacao?'· 📍 '+p.localizacao:''}</div></div><div style="text-align:right"><div style="font-weight:700;color:#dc2626">Saldo: ${p.quantidade} ${p.unidade}</div>${showFalta?`<div style="font-size:11px;color:#9ca3af">Mín: ${p.estoqueMinimo} · Falta: ~${Math.max(0,Number(p.estoqueMinimo)-Number(p.quantidade))}</div>`:''}</div></div>`).join(''):'<div class="empty">✅ Nenhum item precisa de reposição!</div>';}
@@ -2351,36 +2251,19 @@ function renderProjetos(){
     const pct=mats.length?Math.round(sepCount/mats.length*100):0;
     const entrega=p.dataEntrega?new Date(p.dataEntrega+'T00:00:00'):null;
     const vencendo=entrega&&entrega<hoje&&p.status!=='concluido';
-    return `<div class="proj-card-new ${p.status||'ativo'}" onclick="abrirDetalhesProjeto(this)" data-proj-id="${p.id}" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:15px">${p.nome}</div>
-          ${showCliente?`<div style="font-size:12px;color:#6b7280;margin-top:3px">
+    return `<div class="proj-card-new ${p.status||'ativo'}" onclick="abrirDetalhesProjeto(this)" data-proj-id="${p.id}" style="cursor:pointer">       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">         <div style="flex:1">           <div style="font-weight:700;font-size:15px">${p.nome}</div>           ${showCliente?`<div style="font-size:12px;color:#6b7280;margin-top:3px">
             👤 ${p.cliente}${showResp&&p.responsavel?' · 🧑 '+p.responsavel:''}
             ${p.responsavelSep?` · 👷 ${p.responsavelSep}`:''}
-          </div>`:''}
-          ${showDatas?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          </div>`:''}           ${showDatas?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
             ${p.dataInicio?`<span class="data-badge">📅 ${fmtData(p.dataInicio)}</span>`:''}
             ${p.dataEntrega?`<span class="data-badge ${vencendo?'vence':''}">🚚 ${fmtData(p.dataEntrega)}${vencendo?' ⚠️':''}</span>`:''}
-          </div>`:''}
-        </div>
-        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
-          <span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>
-          <button class="btn-green" style="font-size:11px;padding:5px 10px" onclick="event.stopPropagation();abrirOS('${p.id}')">📋 OS</button>
-          ${pode('editar')?`<button class="btn-blue" onclick="event.stopPropagation();abrirModalProj('${p.id}')">✏️</button>`:''}
-          ${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="event.stopPropagation();abrirOrcamento('${p.id}')">💰</button>`:''}
-          ${pode('deletar')?`<button class="btn-red" onclick="event.stopPropagation();deletarProj('${p.id}')">🗑️</button>`:''}
-        </div>
-      </div>
-      ${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}
-      ${showProgresso&&mats.length>0?`<div style="margin-top:10px">
+          </div>`:''}         </div>         <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">           <span class="proj-status ${slc[p.status]||''}">${sl2[p.status]||p.status}</span>           <button class="btn-green" style="font-size:11px;padding:5px 10px" onclick="event.stopPropagation();abrirOS('${p.id}')">📋 OS</button>           ${pode('editar')?`<button class="btn-blue" onclick="event.stopPropagation();abrirModalProj('${p.id}')">✏️</button>`:''}           ${pode('editar')?`<button class="btn-green" style="font-size:11px;padding:4px 8px" onclick="event.stopPropagation();abrirOrcamento('${p.id}')">💰</button>`:''}           ${pode('deletar')?`<button class="btn-red" onclick="event.stopPropagation();deletarProj('${p.id}')">🗑️</button>`:''}         </div>       </div>       ${showObs&&p.obs?`<div style="font-size:12px;color:#6b7280;margin-top:6px">📝 ${p.obs}</div>`:''}       ${showProgresso&&mats.length>0?`<div style="margin-top:10px">
         <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:4px">
           <span>📦 ${sepCount}/${mats.length} separados ${faltCount>0?`· <span style="color:#dc2626;font-weight:700">❌ ${faltCount} faltando</span>`:''}</span>
           <span style="font-weight:700;color:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}">${pct}%</span>
         </div>
         <div class="proj-prog-bar"><div class="proj-prog-fill" style="width:${pct}%;background:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}"></div></div>
-      </div>`:'<div style="font-size:11px;color:#9ca3af;margin-top:8px">Nenhum material cadastrado. Clique em 📋 OS para adicionar.</div>'}
-    </div>`;
+      </div>`:'<div style="font-size:11px;color:#9ca3af;margin-top:8px">Nenhum material cadastrado. Clique em 📋 OS para adicionar.</div>'}     </div>`;
   }).join(''):'<div class="empty">Nenhum projeto encontrado.</div>';}
 function abrirModalProj(id){
   editProjId=id||null;
@@ -2512,24 +2395,7 @@ function renderFornecedores(){
     if(ord==='za') return String(b.nome||'').localeCompare(String(a.nome||''),'pt-BR');
     return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
   });
-  document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`
-    <div class="forn-card" style="cursor:pointer;transition:box-shadow .2s" onclick="abrirDetalhesForn('${f.id}')" onmouseover="this.style.boxShadow='0 2px 8px #16a34a22'" onmouseout="this.style.boxShadow=''">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div>
-          <div style="font-weight:700;font-size:14px">${f.nome}</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:2px">
-            ${showTel&&f.tel?'📞 '+f.tel+' ':''}
-            ${showEmail&&f.email?'· ✉️ '+f.email+' ':''}
-            ${showCat&&f.categoria?'· '+(CATS[f.categoria]?.icon||'')+(CATS[f.categoria]?.label||f.categoria):''}
-          </div>
-          ${showObs&&f.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">📝 ${f.obs}</div>`:''}
-        </div>
-        <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
-          ${pode('editar')?`<button class="btn-blue" onclick="abrirModalForn('${f.id}')">✏️ Editar</button>`:''}
-          ${pode('deletar')?`<button class="btn-red" onclick="deletarForn('${f.id}')">🗑️</button>`:''}
-        </div>
-      </div>
-    </div>`).join(''):'<div class="empty">Nenhum fornecedor encontrado.</div>';
+  document.getElementById('lista-fornecedores').innerHTML=fil.length?fil.map(f=>`     <div class="forn-card" style="cursor:pointer;transition:box-shadow .2s" onclick="abrirDetalhesForn('${f.id}')" onmouseover="this.style.boxShadow='0 2px 8px #16a34a22'" onmouseout="this.style.boxShadow=''">       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">         <div>           <div style="font-weight:700;font-size:14px">${f.nome}</div>           <div style="font-size:12px;color:#6b7280;margin-top:2px">             ${showTel&&f.tel?'📞 '+f.tel+' ':''}             ${showEmail&&f.email?'· ✉️ '+f.email+' ':''}             ${showCat&&f.categoria?'· '+(CATS[f.categoria]?.icon||'')+(CATS[f.categoria]?.label||f.categoria):''}           </div>           ${showObs&&f.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">📝 ${f.obs}</div>`:''}         </div>         <div style="display:flex;gap:6px" onclick="event.stopPropagation()">           ${pode('editar')?`<button class="btn-blue" onclick="abrirModalForn('${f.id}')">✏️ Editar</button>`:''}           ${pode('deletar')?`<button class="btn-red" onclick="deletarForn('${f.id}')">🗑️</button>`:''}         </div>       </div>     </div>`).join(''):'<div class="empty">Nenhum fornecedor encontrado.</div>';
 }
 
 function abrirDetalhesForn(id){
@@ -2540,18 +2406,7 @@ function abrirDetalhesForn(id){
   const itensForn = produtos.filter(p => p.fornecedor === f.nome);
   
   // Create detail modal content
-  let html = `
-    <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px">
-      <div style="font-size:20px;font-weight:800;color:#14532d;margin-bottom:8px">${f.nome}</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
-        ${f.tel?`<span>📞 ${f.tel}</span>`:''}
-        ${f.email?`<span>✉️ ${f.email}</span>`:''}
-        ${cat?`<span>${cat.icon} ${cat.label}</span>`:''}
-      </div>
-      ${f.obs?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📝 ${f.obs}</div>`:''}
-    </div>
-    <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Itens fornecidos (${itensForn.length})</div>
-    ${itensForn.length?itensForn.map(p=>`
+  let html = `     <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:12px">       <div style="font-size:20px;font-weight:800;color:#14532d;margin-bottom:8px">${f.nome}</div>       <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px">         ${f.tel?`<span>📞 ${f.tel}</span>`:''}         ${f.email?`<span>✉️ ${f.email}</span>`:''}         ${cat?`<span>${cat.icon} ${cat.label}</span>`:''}       </div>       ${f.obs?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📝 ${f.obs}</div>`:''}     </div>     <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Itens fornecidos (${itensForn.length})</div>     ${itensForn.length?itensForn.map(p=>`
       <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
         <span>${CATS[p.categoria]?.icon||''} ${p.nome}</span>
         <span style="color:#16a34a;font-weight:700">${p.quantidade} ${p.unidade}</span>
@@ -2676,129 +2531,116 @@ function switchRel(rel){
 }
 
 function renderRelGeral(){
-  const deStr=document.getElementById('rg-de')?.value;
-  const ateStr=document.getElementById('rg-ate')?.value;
-  const tipo=document.getElementById('rg-tipo')?.value||'';
-  const busca=(document.getElementById('rg-busca')?.value||'').toLowerCase();
-  const de=deStr?new Date(deStr+'T00:00:00'):null;
-  const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
+  const deStr = document.getElementById('rg-de')?.value;
+  const ateStr = document.getElementById('rg-ate')?.value;
+  const tipo = document.getElementById('rg-tipo')?.value || '';
+  const busca = (document.getElementById('rg-busca')?.value || '').toLowerCase();
+  const de = deStr ? new Date(deStr + 'T00:00:00') : null;
+  const ate = ateStr ? new Date(ateStr + 'T23:59:59') : null;
 
-  const fil=historico.filter(h=>{
-    if(tipo&&h.tipo!==tipo)return false;
-    if(busca&&!(h.itemNome||'').toLowerCase().includes(busca))return false;
-    const d=parseDateBR(h.data)||new Date(h.data);
-    if(de&&d&&d<de)return false;
-    if(ate&&d&&d>ate)return false;
+  const fil = historico.filter(h => {
+    if(tipo && h.tipo !== tipo) return false;
+    if(busca && !(h.itemNome || '').toLowerCase().includes(busca)) return false;
+    const d = parseDateBR(h.data);
+    if(de && d && d < de) return false;
+    if(ate && d && d > ate) return false;
     return true;
   });
 
   // Agrupar por item
-  const grupos={};
-  fil.forEach(h=>{
-    const key=h.itemId||h.itemNome;
+  const grupos = {};
+  fil.forEach(h => {
+    const key = h.itemId || h.itemNome;
     if(!grupos[key]){
-      const prod=produtos.find(p=>String(p.id)===String(h.itemId));
-      grupos[key]={
-        nome:h.itemNome,
-        cod:prod?.codigoInterno||getCodigo(prod||{nome:h.itemNome,categoria:'',id:h.itemId})||'—',
-        entradas:0, saidas:0
+      const prod = produtos.find(p => String(p.id) === String(h.itemId));
+      grupos[key] = {
+        nome: h.itemNome,
+        cod: prod?.codigoInterno || getCodigo(prod) || '—',
+        estoqueAtual: Number(prod?.quantidade || 0),
+        unidade: prod?.unidade || '',
+        entradas: 0,
+        saidas: 0
       };
     }
-    if(h.tipo==='entrada') grupos[key].entradas+=Number(h.quantidade);
-    else grupos[key].saidas+=Number(h.quantidade);
+    if(h.tipo === 'entrada') grupos[key].entradas += Number(h.quantidade);
+    else grupos[key].saidas += Number(h.quantidade);
   });
 
-  const lista=Object.values(grupos).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-  const te=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);
-  const ts=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);
+  const lista = Object.values(grupos).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const te = fil.filter(h => h.tipo === 'entrada').reduce((a,h) => a + Number(h.quantidade), 0);
+  const ts = fil.filter(h => h.tipo === 'saida').reduce((a,h) => a + Number(h.quantidade), 0);
 
-  document.getElementById('rg-summary').innerHTML=`
-    <div class="rel-sum-card"><div class="rel-sum-label">Itens distintos</div><div class="rel-sum-val">${lista.length}</div></div>
-    <div class="rel-sum-card" style="border-left:4px solid #16a34a"><div class="rel-sum-label">Total Entradas</div><div class="rel-sum-val">+${fmtN(te)}</div></div>
-    <div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(ts)}</div></div>`;
+  document.getElementById('rg-summary').innerHTML = `<div class="rel-sum-card"><div class="rel-sum-label">Itens distintos</div><div class="rel-sum-val">${lista.length}</div></div><div class="rel-sum-card" style="border-left:4px solid #16a34a"><div class="rel-sum-label">Total Entradas</div><div class="rel-sum-val">+${fmtN(te)}</div></div><div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(ts)}</div></div>`;
 
-  document.getElementById('rg-body').innerHTML=lista.length?lista.map(g=>`<tr>
-    <td><span class="ic-code">${g.cod}</span></td>
-    <td style="font-weight:600">${g.nome}</td>
-    <td class="num" style="color:#16a34a;font-weight:700">${g.entradas>0?'+'+fmtN(g.entradas):'—'}</td>
-    <td class="num" style="color:#dc2626;font-weight:700">${g.saidas>0?'-'+fmtN(g.saidas):'—'}</td>
-    <td class="num" style="font-weight:700;color:${g.entradas-g.saidas>=0?'#16a34a':'#dc2626'}">${g.entradas-g.saidas>=0?'+':''}${fmtN(g.entradas-g.saidas)}</td>
-  </tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>';
+  document.getElementById('rg-body').innerHTML = lista.length ? lista.map(g => `<tr><td><span class="ic-code">${g.cod}</span></td><td style="font-weight:600">${g.nome}</td><td class="num" style="color:#16a34a;font-weight:700">${g.entradas > 0 ? '+' + fmtN(g.entradas) : '—'}</td><td class="num" style="color:#dc2626;font-weight:700">${g.saidas > 0 ? '-' + fmtN(g.saidas) : '—'}</td><td class="num" style="font-weight:700;color:${g.estoqueAtual > 0 ? '#16a34a' : '#dc2626'}">${fmtN(g.estoqueAtual)} ${g.unidade}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>';
 }
 
-
 function renderRelPorProjeto(){
-  const rpp=document.getElementById('rpp-proj');
-  if(rpp){
-    const curr=rpp.value;
-    rpp.innerHTML='<option value="">Todos os projetos</option>';
-    const nomesProj=new Set([...projetos.map(p=>String(p.nome)).filter(Boolean),...historico.map(h=>h.projeto).filter(p=>p&&p!=='—')]);
-    [...nomesProj].sort().forEach(p=>rpp.innerHTML+=`<option value="${p}">${p}</option>`);
-    if(curr)rpp.value=curr;
-  }
-  const proj=document.getElementById('rpp-proj')?.value||'';
-  const buscaPP=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
-  const deStr=document.getElementById('rpp-de')?.value;
-  const ateStr=document.getElementById('rpp-ate')?.value;
-  const busca=(document.getElementById('rpp-busca')?.value||'').toLowerCase();
-  const de=deStr?new Date(deStr+'T00:00:00'):null;
-  const ate=ateStr?new Date(ateStr+'T23:59:59'):null;
+  // Ler valores ANTES de repopular selects
+  const proj = document.getElementById('rpp-proj')?.value || '';
+  const deStr = document.getElementById('rpp-de')?.value || '';
+  const ateStr = document.getElementById('rpp-ate')?.value || '';
+  const buscaPP = (document.getElementById('rpp-busca')?.value || '').toLowerCase();
 
-  const fil=historico.filter(h=>{
-    if(h.tipo!=='saida')return false;
-    if(proj&&h.projeto!==proj)return false;
-    if(!h.projeto||h.projeto==='—')return false;
-    if(buscaPP&&!(h.itemNome||'').toLowerCase().includes(buscaPP))return false;
-    if(busca&&!(h.itemNome||'').toLowerCase().includes(busca))return false;
-    const d=parseDateBR(h.data)||new Date(h.data);
-    if(de&&d&&d<de)return false;
-    if(ate&&d&&d>ate)return false;
+  // Repopular select de projetos
+  const rpp = document.getElementById('rpp-proj');
+  if(rpp){
+    rpp.innerHTML = '<option value="">Todos os projetos</option>';
+    const nomesProj = new Set([
+      ...projetos.map(p => String(p.nome)).filter(Boolean),
+      ...historico.map(h => h.projeto).filter(p => p && p !== '—')
+    ]);
+    [...nomesProj].sort().forEach(p => rpp.innerHTML += `<option value="${p}">${p}</option>`);
+    if(proj) rpp.value = proj; // Restaurar seleção
+  }
+
+  const de = deStr ? new Date(deStr + 'T00:00:00') : null;
+  const ate = ateStr ? new Date(ateStr + 'T23:59:59') : null;
+
+  const fil = historico.filter(h => {
+    if(h.tipo !== 'saida') return false;
+    if(proj && h.projeto !== proj) return false;
+    if(!h.projeto || h.projeto === '—') return false;
+    if(buscaPP && !(h.itemNome || '').toLowerCase().includes(buscaPP)) return false;
+    const d = parseDateBR(h.data);
+    if(de && d && d < de) return false;
+    if(ate && d && d > ate) return false;
     return true;
   });
 
   // Agrupar por projeto e por item
-  const gruposProjeto={};
-  fil.forEach(h=>{
-    if(!gruposProjeto[h.projeto]) gruposProjeto[h.projeto]={};
-    const key=h.itemId||h.itemNome;
+  const gruposProjeto = {};
+  fil.forEach(h => {
+    if(!gruposProjeto[h.projeto]) gruposProjeto[h.projeto] = {};
+    const key = h.itemId || h.itemNome;
     if(!gruposProjeto[h.projeto][key]){
-      const prod=produtos.find(p=>String(p.id)===String(h.itemId));
-      gruposProjeto[h.projeto][key]={nome:h.itemNome, cod:prod?.codigoInterno||'—', total:0};
+      const prod = produtos.find(p => String(p.id) === String(h.itemId));
+      gruposProjeto[h.projeto][key] = {nome: h.itemNome, cod: prod?.codigoInterno || getCodigo(prod) || '—', total: 0};
     }
-    gruposProjeto[h.projeto][key].total+=Number(h.quantidade);
+    gruposProjeto[h.projeto][key].total += Number(h.quantidade);
   });
 
-  const projetos_unicos=Object.keys(gruposProjeto).sort();
-  const total=fil.reduce((a,h)=>a+Number(h.quantidade),0);
+  const projetos_unicos = Object.keys(gruposProjeto).sort();
+  const total = fil.reduce((a, h) => a + Number(h.quantidade), 0);
 
-  document.getElementById('rpp-summary').innerHTML=`
-    <div class="rel-sum-card"><div class="rel-sum-label">Projetos</div><div class="rel-sum-val" style="color:#7c3aed">${projetos_unicos.length}</div></div>
-    <div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas (qtd.)</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(total)}</div></div>`;
+  document.getElementById('rpp-summary').innerHTML = `<div class="rel-sum-card"><div class="rel-sum-label">Projetos</div><div class="rel-sum-val" style="color:#7c3aed">${projetos_unicos.length}</div></div><div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas (qtd.)</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(total)}</div></div>`;
 
   if(!projetos_unicos.length){
-    document.getElementById('rpp-body').innerHTML='<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma saída vinculada a projetos.</td></tr>';
+    document.getElementById('rpp-body').innerHTML = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma saída vinculada a projetos.</td></tr>';
     return;
   }
 
-  let html='';
-  projetos_unicos.forEach(projNome=>{
-    const itens=Object.values(gruposProjeto[projNome]).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-    const totalProj=itens.reduce((a,i)=>a+i.total,0);
-    html+=`<tr style="background:#f0fdf4"><td colspan="3" style="font-weight:800;color:#14532d;padding:10px 12px">🏗️ ${projNome}</td><td class="num" style="font-weight:800;color:#dc2626;padding:10px 12px">-${fmtN(totalProj)}</td></tr>`;
-    itens.forEach(item=>{
-      html+=`<tr>
-        <td style="padding-left:24px;font-weight:600">${item.nome}</td>
-        <td><span class="ic-code">${item.cod}</span></td>
-        <td></td>
-        <td class="num" style="color:#dc2626;font-weight:700">-${fmtN(item.total)}</td>
-      </tr>`;
+  let html = '';
+  projetos_unicos.forEach(projNome => {
+    const itens = Object.values(gruposProjeto[projNome]).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const totalProj = itens.reduce((a,i) => a + i.total, 0);
+    html += `<tr style="background:#f0fdf4"><td colspan="2" style="font-weight:800;color:#14532d;padding:10px 12px">🏗️ ${projNome}</td><td class="num" style="font-weight:800;color:#dc2626;padding:10px 12px">-${fmtN(totalProj)}</td></tr>`;
+    itens.forEach(item => {
+      html += `<tr><td style="padding-left:24px;font-weight:600">${item.nome}</td><td><span class="ic-code">${item.cod}</span></td><td class="num" style="color:#dc2626;font-weight:700">-${fmtN(item.total)}</td></tr>`;
     });
   });
-  document.getElementById('rpp-body').innerHTML=html;
+  document.getElementById('rpp-body').innerHTML = html;
 }
-
-
-let inventarioContagens={};
 
 function renderInventario(){
   // Popular select de categorias
@@ -2811,16 +2653,7 @@ function renderInventario(){
   document.getElementById('inv-body').innerHTML=fil.map(p=>{
     const cod=p.codigoInterno||getCodigo(p);
     const val=inventarioContagens[String(p.id)]??'';
-    return`<tr>
-      <td><span class="ic-code">${cod}</span></td>
-      <td style="font-weight:600">${p.nome}</td>
-      <td style="font-size:11px">${CATS[p.categoria]?.icon||''} ${CATS[p.categoria]?.label||p.categoria}</td>
-      <td class="num" style="font-weight:700">${p.quantidade} ${p.unidade}</td>
-      <td class="num"><input type="number" min="0" placeholder="—" value="${val}"
-        style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:right"
-        oninput="inventarioContagens['${p.id}']=this.value?Number(this.value):undefined"
-        onfocus="this.select()"></td>
-    </tr>`;
+    return`<tr>       <td><span class="ic-code">${cod}</span></td>       <td style="font-weight:600">${p.nome}</td>       <td style="font-size:11px">${CATS[p.categoria]?.icon||''} ${CATS[p.categoria]?.label||p.categoria}</td>       <td class="num" style="font-weight:700">${p.quantidade} ${p.unidade}</td>       <td class="num"><input type="number" min="0" placeholder="—" value="${val}"         style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:right"         oninput="inventarioContagens['${p.id}']=this.value?Number(this.value):undefined"         onfocus="this.select()"></td>     </tr>`;
   }).join('');
 }
 
@@ -3017,6 +2850,8 @@ function initRelatorios(){
   // Popular selects de projetos
   const rpp=document.getElementById('rp-proj');if(rpp){rpp.innerHTML='<option value="">Todos os projetos</option>';[...new Set(historico.map(h=>h.projeto).filter(p=>p&&p!=='—'))].forEach(p=>rpp.innerHTML+=`<option value="${p}">${p}</option>`);}
   renderRelValor();
+  renderRelGeral();
+  renderRelPorProjeto();
 }
 
 function renderRelValor(){
@@ -3045,6 +2880,7 @@ function renderRelMovPeriodo(){
   const deStr=document.getElementById('rp-de')?.value;
   const ateStr=document.getElementById('rp-ate')?.value;
   const tipo=document.getElementById('rp-tipo')?.value||'';
+  const modo=document.getElementById('rp-modo')?.value||'detalhado';
   const itemBusca=(document.getElementById('rp-item-busca')?.value||'').toLowerCase();
   const respBusca=(document.getElementById('rp-resp-busca')?.value||'').toLowerCase();
   const de=deStr?new Date(deStr+'T00:00:00'):null;
@@ -3061,6 +2897,19 @@ function renderRelMovPeriodo(){
   fil.sort((a,b)=>{const da=parseDateBR(a.data)||new Date(0);const db=parseDateBR(b.data)||new Date(0);return db-da;});
   const totalE=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);const totalS=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);
   document.getElementById('rp-summary').innerHTML=`<div class="rel-sum-card"><div class="rel-sum-label">Registros</div><div class="rel-sum-val">${fil.length}</div></div><div class="rel-sum-card" style="border-left:4px solid #16a34a"><div class="rel-sum-label">Total Entradas</div><div class="rel-sum-val">+${fmtN(totalE)}</div></div><div class="rel-sum-card" style="border-left:4px solid #dc2626"><div class="rel-sum-label">Total Saídas</div><div class="rel-sum-val" style="color:#dc2626">-${fmtN(totalS)}</div></div><div class="rel-sum-card"><div class="rel-sum-label">Itens Distintos</div><div class="rel-sum-val" style="color:#7c3aed">${new Set(fil.map(h=>h.itemId)).size}</div></div>`;
+  // Modo agrupado
+  if(modo === 'agrupado'){
+    const grupos = {};
+    fil.forEach(h => {
+      const key = h.itemId || h.itemNome;
+      if(!grupos[key]){ const prod=produtos.find(p=>String(p.id)===String(h.itemId)); grupos[key]={nome:h.itemNome,cod:prod?.codigoInterno||'—',unidade:prod?.unidade||'',entradas:0,saidas:0}; }
+      if(h.tipo==='entrada') grupos[key].entradas+=Number(h.quantidade);
+      else grupos[key].saidas+=Number(h.quantidade);
+    });
+    const lista=Object.values(grupos).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+    document.getElementById('rp-body').innerHTML=lista.length?lista.map(g=>`<tr><td colspan="2" style="font-weight:600">${g.nome}</td><td><span class="ic-code">${g.cod}</span></td><td></td><td></td><td></td><td class="num" style="color:#16a34a;font-weight:700">${g.entradas>0?'+'+fmtN(g.entradas):'—'}</td></tr><tr><td colspan="2" style="padding-left:16px;color:#dc2626">${g.nome}</td><td></td><td></td><td></td><td></td><td class="num" style="color:#dc2626;font-weight:700">${g.saidas>0?'-'+fmtN(g.saidas):'—'}</td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>';
+    return;
+  }
   document.getElementById('rp-body').innerHTML=fil.length?fil.map(h=>`<tr><td style="font-size:11px;color:#6b7280">${formatarDataLegivel(h.data)}</td><td><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td><td style="font-weight:600"><span style="font-size:10px;color:#16a34a;background:#f0fdf4;padding:1px 5px;border-radius:4px;margin-right:4px">${h.codigoInterno||''}</span>${h.itemNome}</td><td>${h.responsavel||'—'}</td><td>${h.projeto&&h.projeto!=='—'?h.projeto:'—'}</td><td style="font-size:11px;color:#6b7280">${h.motivo||'—'}</td><td class="num" style="color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação no período.</td></tr>';
 }
 
@@ -3111,12 +2960,7 @@ function gerarConteudoImpressao(id){
     const lista=Object.values(grupos).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
     const te=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);
     const ts=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);
-    let html=`<div class="summary">
-      <div class="sum-card"><div class="sum-label">Itens distintos</div><div class="sum-val">${lista.length}</div></div>
-      <div class="sum-card" style="border-left:3px solid #16a34a"><div class="sum-label">Total Entradas</div><div class="sum-val">+${fmtN(te)}</div></div>
-      <div class="sum-card" style="border-left:3px solid #dc2626"><div class="sum-label">Total Saídas</div><div class="sum-val" style="color:#dc2626">-${fmtN(ts)}</div></div>
-    </div>
-    <table><thead><tr><th>Código</th><th>Item</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo</th></tr></thead><tbody>`;
+    let html=`<div class="summary">       <div class="sum-card"><div class="sum-label">Itens distintos</div><div class="sum-val">${lista.length}</div></div>       <div class="sum-card" style="border-left:3px solid #16a34a"><div class="sum-label">Total Entradas</div><div class="sum-val">+${fmtN(te)}</div></div>       <div class="sum-card" style="border-left:3px solid #dc2626"><div class="sum-label">Total Saídas</div><div class="sum-val" style="color:#dc2626">-${fmtN(ts)}</div></div>     </div>     <table><thead><tr><th>Código</th><th>Item</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo em Estoque</th></tr></thead><tbody>`;
     lista.forEach(g=>{
       const saldo=g.entradas-g.saidas;
       html+=`<tr><td style="font-size:11px;color:#16a34a;font-weight:700">${g.cod}</td><td>${g.nome}</td><td class="num" style="color:#16a34a">${g.entradas>0?'+'+fmtN(g.entradas):'—'}</td><td class="num" style="color:#dc2626">${g.saidas>0?'-'+fmtN(g.saidas):'—'}</td><td class="num" style="color:${saldo>=0?'#16a34a':'#dc2626'};font-weight:700">${saldo>=0?'+':''}${fmtN(saldo)}</td></tr>`;
@@ -3151,11 +2995,7 @@ function gerarConteudoImpressao(id){
     });
     const projetos_unicos=Object.keys(gruposProjeto).sort();
     const total=fil.reduce((a,h)=>a+Number(h.quantidade),0);
-    let html=`<div class="summary">
-      <div class="sum-card"><div class="sum-label">Projetos</div><div class="sum-val" style="color:#7c3aed">${projetos_unicos.length}</div></div>
-      <div class="sum-card" style="border-left:3px solid #dc2626"><div class="sum-label">Total Saídas</div><div class="sum-val" style="color:#dc2626">-${fmtN(total)}</div></div>
-    </div>
-    <table><thead><tr><th>Item</th><th>Código</th><th class="num">Total Saída</th></tr></thead><tbody>`;
+    let html=`<div class="summary">       <div class="sum-card"><div class="sum-label">Projetos</div><div class="sum-val" style="color:#7c3aed">${projetos_unicos.length}</div></div>       <div class="sum-card" style="border-left:3px solid #dc2626"><div class="sum-label">Total Saídas</div><div class="sum-val" style="color:#dc2626">-${fmtN(total)}</div></div>     </div>     <table><thead><tr><th>Item</th><th>Código</th><th class="num">Total Saída</th></tr></thead><tbody>`;
     projetos_unicos.forEach(projNome=>{
       const itens=Object.values(gruposProjeto[projNome]).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
       const totalProj=itens.reduce((a,i)=>a+i.total,0);
@@ -3197,15 +3037,7 @@ function renderLog(){
   const tipo = document.getElementById('log-filtro-tipo')?.value || '';
   const fil = tipo ? activityLog.filter(l => l.tipo === tipo) : activityLog;
   const el = document.getElementById('lista-log');
-  el.innerHTML = fil.length ? fil.map(l => `
-    <div class="log-item">
-      <div class="log-icon">${l.icon}</div>
-      <div class="log-info">
-        <div class="log-user">${l.usuario}</div>
-        <div class="log-msg">${l.msg}</div>
-        <div class="log-time">${l.time}</div>
-      </div>
-    </div>`).join('') : '<div class="empty">Nenhuma atividade registrada.</div>';
+  el.innerHTML = fil.length ? fil.map(l => `     <div class="log-item">       <div class="log-icon">${l.icon}</div>       <div class="log-info">         <div class="log-user">${l.usuario}</div>         <div class="log-msg">${l.msg}</div>         <div class="log-time">${l.time}</div>       </div>     </div>`).join('') : '<div class="empty">Nenhuma atividade registrada.</div>';
 }
 
 function limparLog(){
@@ -3248,10 +3080,7 @@ function abrirOrcamento(id){
   const listaEl = document.getElementById('mo-materiais-lista');
   if(mats.length) {
     listaEl.innerHTML = `<div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">📦 Materiais utilizados</div>` +
-      mats.map(m => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
-        <span>${m.nome}</span>
-        <span style="color:#6b7280">${m.qty} ${m.unidade} × R$ ${m.custo.toFixed(2)} = <strong>R$ ${(m.qty * m.custo).toFixed(2)}</strong></span>
-      </div>`).join('');
+      mats.map(m => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">         <span>${m.nome}</span>         <span style="color:#6b7280">${m.qty} ${m.unidade} × R$ ${m.custo.toFixed(2)} = <strong>R$ ${(m.qty * m.custo).toFixed(2)}</strong></span>       </div>`).join('');
   } else {
     listaEl.innerHTML = '<div style="color:#9ca3af;font-size:12px">Nenhuma saída registrada para este projeto ainda.</div>';
   }
@@ -3323,15 +3152,7 @@ async function abrirOS(id){
     }catch(e){return String(d);}
   };
   
-  document.getElementById('mos-header-info').innerHTML = `
-    <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">
-      <span>👤 <strong>${p.cliente}</strong></span>
-      ${p.responsavel?`<span>🧑 ${p.responsavel}</span>`:''}
-      ${p.responsavelSep?`<span>👷 Sep: ${p.responsavelSep}</span>`:''}
-      ${p.dataInicio?`<span class="data-badge">📅 Início: ${fmtData(p.dataInicio)}</span>`:''}
-      ${p.dataEntrega?`<span class="data-badge ${vencendo?'vence':''}">🚚 Entrega: ${fmtData(p.dataEntrega)}${vencendo?' ⚠️':''}</span>`:''}
-      ${p.obs?`<span style="color:#6b7280">📝 ${p.obs}</span>`:''}
-    </div>`;
+  document.getElementById('mos-header-info').innerHTML = `     <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">       <span>👤 <strong>${p.cliente}</strong></span>       ${p.responsavel?`<span>🧑 ${p.responsavel}</span>`:''}       ${p.responsavelSep?`<span>👷 Sep: ${p.responsavelSep}</span>`:''}       ${p.dataInicio?`<span class="data-badge">📅 Início: ${fmtData(p.dataInicio)}</span>`:''}       ${p.dataEntrega?`<span class="data-badge ${vencendo?'vence':''}">🚚 Entrega: ${fmtData(p.dataEntrega)}${vencendo?' ⚠️':''}</span>`:''}       ${p.obs?`<span style="color:#6b7280">📝 ${p.obs}</span>`:''}     </div>`;
   
   cancelarAddMaterial();
   renderMateriais(p);
@@ -3361,32 +3182,7 @@ function renderMateriais(p){
   const estMap = {};
   produtos.forEach(p2 => { estMap[String(p2.id)] = p2; });
 
-  document.getElementById('lista-materiais').innerHTML = mats.length ? `
-    <div style="overflow-x:auto">
-    <table class="os-table">
-      <thead>
-        <tr>
-          <th>Material</th>
-          <th style="text-align:center">Saída</th>
-          <th style="text-align:center">Estoque</th>
-          <th style="text-align:center">Disponibilidade</th>
-          <th style="text-align:center">✅ Separado</th>
-          <th style="text-align:center">Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${mats.map((m,i) => {
-          const prod = m.itemId ? estMap[String(m.itemId)] : null;
-          const estoqueAtual = prod ? Number(prod.quantidade) : null;
-          const falta = estoqueAtual !== null ? Math.max(0, m.qty - estoqueAtual) : null;
-          let situacao, sitCor;
-          if(estoqueAtual === null){ situacao='Manual'; sitCor='#9ca3af'; }
-          else if(estoqueAtual >= m.qty){ situacao='✅ OK'; sitCor='#16a34a'; }
-          else if(estoqueAtual > 0){ situacao=`🟡 Faltam ${falta}`; sitCor='#d97706'; }
-          else { situacao='🔴 Sem estoque'; sitCor='#dc2626'; }
-          const st = m.status || 'pendente';
-          const rowCls = st==='separado'?'status-ok':st==='faltando'?'status-faltando':st==='substituido'?'status-substituido':'';
-          return `<tr class="${rowCls}">
+  document.getElementById('lista-materiais').innerHTML = mats.length ? `     <div style="overflow-x:auto">     <table class="os-table">       <thead>         <tr>           <th>Material</th>           <th style="text-align:center">Saída</th>           <th style="text-align:center">Estoque</th>           <th style="text-align:center">Disponibilidade</th>           <th style="text-align:center">✅ Separado</th>           <th style="text-align:center">Ações</th>         </tr>       </thead>       <tbody>         ${mats.map((m,i) => {           const prod = m.itemId ? estMap[String(m.itemId)] : null;           const estoqueAtual = prod ? Number(prod.quantidade) : null;           const falta = estoqueAtual !== null ? Math.max(0, m.qty - estoqueAtual) : null;           let situacao, sitCor;           if(estoqueAtual === null){ situacao='Manual'; sitCor='#9ca3af'; }           else if(estoqueAtual >= m.qty){ situacao='✅ OK'; sitCor='#16a34a'; }           else if(estoqueAtual > 0){ situacao=`🟡 Faltam ${falta}`; sitCor='#d97706'; }           else { situacao='🔴 Sem estoque'; sitCor='#dc2626'; }           const st = m.status || 'pendente';           const rowCls = st==='separado'?'status-ok':st==='faltando'?'status-faltando':st==='substituido'?'status-substituido':'';           return `<tr class="${rowCls}">
             <td>
               <div style="font-weight:700">${m.nome}</div>
               ${m.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">💬 ${m.obs}</div>`:''}
@@ -3424,11 +3220,7 @@ function renderMateriais(p){
                 ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:3px 6px" onclick="removerMat('${osProjetoId}',${i})" title="Remover">🗑️</button>`:''}
               </div>
             </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>
-    </div>`
+          </tr>`;         }).join('')}       </tbody>     </table>     </div>`
     : '<div class="empty" style="padding:24px">Nenhum material adicionado. Clique em "+ Adicionar Material" para começar.</div>';
 }
 
@@ -3571,50 +3363,12 @@ function imprimirOS(){
   const separados = mats.filter(m => m.status === 'separado').length;
   
   const win = window.open('','_blank','width=900,height=700');
-  win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>OS — ${p.nome}</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',sans-serif;color:#1a1a1a;padding:24px;font-size:13px}
-  .hdr{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;border-radius:10px;padding:16px;margin-bottom:20px}
-  .hdr-title{font-size:20px;font-weight:800}.hdr-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;opacity:.9}
-  .prog{background:#ffffff44;border-radius:20px;height:8px;margin-top:10px;overflow:hidden}
-  .prog-fill{height:100%;background:#fff;border-radius:20px}
-  table{width:100%;border-collapse:collapse;margin-top:8px}
-  th{background:#f0fdf4;color:#14532d;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:11px}
-  td{padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}
-  .badge{border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}
-  .sep{background:#f0fdf4;color:#16a34a}.falt{background:#fef2f2;color:#dc2626}
-  .subs{background:#fffbeb;color:#d97706}.pend{background:#f3f4f6;color:#6b7280}
-  .footer{margin-top:20px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}
-  @media print{button{display:none!important}}</style></head><body>
-  <div class="hdr">
-    <div class="hdr-title">📋 Ordem de Serviço — ${p.nome}</div>
-    <div class="hdr-meta">
-      <span>👤 Cliente: ${p.cliente}</span>
-      ${p.responsavel?`<span>🧑 Resp: ${p.responsavel}</span>`:''}
-      ${p.responsavelSep?`<span>👷 Separação: ${p.responsavelSep}</span>`:''}
-      ${p.dataInicio?`<span>📅 Início: ${fmtData(p.dataInicio)}</span>`:''}
-      ${p.dataEntrega?`<span>🚚 Entrega: ${fmtData(p.dataEntrega)}</span>`:''}
-    </div>
-    <div class="prog"><div class="prog-fill" style="width:${mats.length?Math.round(separados/mats.length*100):0}%"></div></div>
-    <div style="font-size:11px;margin-top:4px;opacity:.9">${separados} de ${mats.length} itens separados</div>
-  </div>
-  ${p.obs?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">📝 ${p.obs}</div>`:''}
-  <table><thead><tr><th>#</th><th>Material</th><th style="text-align:center">Saída</th><th style="text-align:center">Estoque</th><th style="text-align:center">Disponibilidade</th><th>Status</th><th>Observação</th></tr></thead><tbody>
-  ${mats.map((m,i)=>{
-    const prod = produtos.find(x=>String(x.id)===String(m.itemId));
-    const est = prod ? Number(prod.quantidade) : null;
-    const falta = est !== null ? Math.max(0, m.qty - est) : null;
-    let sit = est===null?'Manual':est>=m.qty?'✅ OK':est>0?`🟡 Falta ${falta}`:'🔴 Sem estoque';
-    return `<tr><td>${i+1}</td><td style="font-weight:600">${m.nome}</td>
+  win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>OS — ${p.nome}</title>   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',sans-serif;color:#1a1a1a;padding:24px;font-size:13px}   .hdr{background:linear-gradient(135deg,#14532d,#16a34a);color:#fff;border-radius:10px;padding:16px;margin-bottom:20px}   .hdr-title{font-size:20px;font-weight:800}.hdr-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;opacity:.9}   .prog{background:#ffffff44;border-radius:20px;height:8px;margin-top:10px;overflow:hidden}   .prog-fill{height:100%;background:#fff;border-radius:20px}   table{width:100%;border-collapse:collapse;margin-top:8px}   th{background:#f0fdf4;color:#14532d;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid #bbf7d0;font-size:11px}   td{padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}   .badge{border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700}   .sep{background:#f0fdf4;color:#16a34a}.falt{background:#fef2f2;color:#dc2626}   .subs{background:#fffbeb;color:#d97706}.pend{background:#f3f4f6;color:#6b7280}   .footer{margin-top:20px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;text-align:center}   @media print{button{display:none!important}}</style></head><body>   <div class="hdr">     <div class="hdr-title">📋 Ordem de Serviço — ${p.nome}</div>     <div class="hdr-meta">       <span>👤 Cliente: ${p.cliente}</span>       ${p.responsavel?`<span>🧑 Resp: ${p.responsavel}</span>`:''}       ${p.responsavelSep?`<span>👷 Separação: ${p.responsavelSep}</span>`:''}       ${p.dataInicio?`<span>📅 Início: ${fmtData(p.dataInicio)}</span>`:''}       ${p.dataEntrega?`<span>🚚 Entrega: ${fmtData(p.dataEntrega)}</span>`:''}     </div>     <div class="prog"><div class="prog-fill" style="width:${mats.length?Math.round(separados/mats.length*100):0}%"></div></div>     <div style="font-size:11px;margin-top:4px;opacity:.9">${separados} de ${mats.length} itens separados</div>   </div>   ${p.obs?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px">📝 ${p.obs}</div>`:''}   <table><thead><tr><th>#</th><th>Material</th><th style="text-align:center">Saída</th><th style="text-align:center">Estoque</th><th style="text-align:center">Disponibilidade</th><th>Status</th><th>Observação</th></tr></thead><tbody>   ${mats.map((m,i)=>{     const prod = produtos.find(x=>String(x.id)===String(m.itemId));     const est = prod ? Number(prod.quantidade) : null;     const falta = est !== null ? Math.max(0, m.qty - est) : null;     let sit = est===null?'Manual':est>=m.qty?'✅ OK':est>0?`🟡 Falta ${falta}`:'🔴 Sem estoque';     return `<tr><td>${i+1}</td><td style="font-weight:600">${m.nome}</td>
     <td style="text-align:center;font-weight:700">${m.qty} ${m.unidade}</td>
     <td style="text-align:center;font-weight:700">${est!==null?est+' '+m.unidade:'—'}</td>
     <td style="text-align:center;font-size:11px">${sit}</td>
     <td><span class="badge ${m.status==='separado'?'sep':m.status==='faltando'?'falt':m.status==='substituido'?'subs':'pend'}">${statusLabel[m.status||'pendente']}</span></td>
-    <td style="color:#6b7280">${m.obs||'—'}</td></tr>`;}).join('')}
-  ${!mats.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Nenhum material cadastrado.</td></tr>':''}
-  </tbody></table>
-  <div class="footer">Muda Paisagismo · OS gerada em ${new Date().toLocaleString('pt-BR')} · Por ${usuarioAtual?.nome||'—'}</div>
-  <br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>
-  </body></html>`);
+    <td style="color:#6b7280">${m.obs||'—'}</td></tr>`;}).join('')}   ${!mats.length?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px">Nenhum material cadastrado.</td></tr>':''}   </tbody></table>   <div class="footer">Muda Paisagismo · OS gerada em ${new Date().toLocaleString('pt-BR')} · Por ${usuarioAtual?.nome||'—'}</div>   <br><button onclick="window.print()" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">🖨️ Imprimir / PDF</button>   </body></html>`);
   win.document.close();
 }
 // ===================== FIM OS =====================
@@ -3664,19 +3418,7 @@ function renderCategorias(){
   const cats = Object.entries(CATS);
   count.textContent = cats.length + ' categorias cadastradas';
   
-  lista.innerHTML = cats.map(([id,c]) => `
-    <div class="cat-item">
-      <div class="cat-icon">${c.icon}</div>
-      <div class="cat-color" style="background:${c.cor}"></div>
-      <div style="flex:1">
-        <div class="cat-label">${c.label}</div>
-        <div class="cat-id">ID: ${id} · Prefix: ${c.prefix}</div>
-      </div>
-      <div style="display:flex;gap:5px">
-        <button class="btn-blue" onclick="editarCategoria('${id}')">✏️</button>
-        <button class="btn-red" onclick="removerCategoria('${id}')">🗑️</button>
-      </div>
-    </div>`).join('') || '<div class="empty">Nenhuma categoria cadastrada.</div>';
+  lista.innerHTML = cats.map(([id,c]) => `     <div class="cat-item">       <div class="cat-icon">${c.icon}</div>       <div class="cat-color" style="background:${c.cor}"></div>       <div style="flex:1">         <div class="cat-label">${c.label}</div>         <div class="cat-id">ID: ${id} · Prefix: ${c.prefix}</div>       </div>       <div style="display:flex;gap:5px">         <button class="btn-blue" onclick="editarCategoria('${id}')">✏️</button>         <button class="btn-red" onclick="removerCategoria('${id}')">🗑️</button>       </div>     </div>`).join('') || '<div class="empty">Nenhuma categoria cadastrada.</div>';
   
   // Update all category selects throughout the app
   atualizarSelectsCategorias();
@@ -3752,17 +3494,9 @@ function renderMotivos(){
   const listE = document.getElementById('lista-motivos-entrada');
   const listS = document.getElementById('lista-motivos-saida');
   
-  listE.innerHTML = motivosEntrada.map((m,i) => `
-    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px">
-      <span style="flex:1;font-size:12px">${m}</span>
-      <button class="btn-red" style="padding:2px 6px;font-size:11px" onclick="removerMotivo('entrada',${i})">✕</button>
-    </div>`).join('');
+  listE.innerHTML = motivosEntrada.map((m,i) => `     <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px">       <span style="flex:1;font-size:12px">${m}</span>       <button class="btn-red" style="padding:2px 6px;font-size:11px" onclick="removerMotivo('entrada',${i})">✕</button>     </div>`).join('');
   
-  listS.innerHTML = motivosSaida.map((m,i) => `
-    <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px">
-      <span style="flex:1;font-size:12px">${m}</span>
-      <button class="btn-red" style="padding:2px 6px;font-size:11px" onclick="removerMotivo('saida',${i})">✕</button>
-    </div>`).join('');
+  listS.innerHTML = motivosSaida.map((m,i) => `     <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;margin-bottom:5px">       <span style="flex:1;font-size:12px">${m}</span>       <button class="btn-red" style="padding:2px 6px;font-size:11px" onclick="removerMotivo('saida',${i})">✕</button>     </div>`).join('');
 }
 
 function adicionarMotivo(tipo){
@@ -3873,17 +3607,7 @@ function atualizarTabsModulos(){
     if(m.id === 'manutencao'){
       sec.innerHTML = renderModuloManutencao();
     } else {
-      sec.innerHTML = `
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div class="card-title" style="margin:0">${m.icon} ${m.nome}</div>
-            <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>
-          </div>
-          <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>
-          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">
-            💡 Este módulo será personalizado em breve. Use as Configurações para definir os campos necessários.
-          </div>
-        </div>`;
+      sec.innerHTML = `         <div class="card">           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">             <div class="card-title" style="margin:0">${m.icon} ${m.nome}</div>             <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>           </div>           <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">             💡 Este módulo será personalizado em breve. Use as Configurações para definir os campos necessários.           </div>         </div>`;
     }
     mainDiv.appendChild(sec);
   });
@@ -3894,21 +3618,7 @@ function renderModulos(){
   const count = document.getElementById('mod-count');
   count.textContent = modulos.length + ' módulos disponíveis';
   
-  lista.innerHTML = modulos.map((m,i) => `
-    <div class="modulo-card ${m.ativo?'ativo':''}">
-      <div class="modulo-icon">${m.icon}</div>
-      <div class="modulo-info">
-        <div class="modulo-nome">${m.nome}</div>
-        <div class="modulo-desc">${m.desc}</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <label class="toggle-switch">
-          <input type="checkbox" ${m.ativo?'checked':''} onchange="toggleModulo(${i},this.checked)">
-          <span class="toggle-slider"></span>
-        </label>
-        ${!['logistica','manutencao','viveiro','agenda'].includes(m.id)?`<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerModulo(${i})">🗑️</button>`:''}
-      </div>
-    </div>`).join('') || '<div class="empty">Nenhum módulo cadastrado.</div>';
+  lista.innerHTML = modulos.map((m,i) => `     <div class="modulo-card ${m.ativo?'ativo':''}">       <div class="modulo-icon">${m.icon}</div>       <div class="modulo-info">         <div class="modulo-nome">${m.nome}</div>         <div class="modulo-desc">${m.desc}</div>       </div>       <div style="display:flex;gap:8px;align-items:center">         <label class="toggle-switch">           <input type="checkbox" ${m.ativo?'checked':''} onchange="toggleModulo(${i},this.checked)">           <span class="toggle-slider"></span>         </label>         ${!['logistica','manutencao','viveiro','agenda'].includes(m.id)?`<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerModulo(${i})">🗑️</button>`:''}       </div>     </div>`).join('') || '<div class="empty">Nenhum módulo cadastrado.</div>';
 }
 
 async function toggleModulo(idx, ativo){
@@ -4005,10 +3715,7 @@ function atualizarSelectUnidades(){
 
 function renderUnidades(){
   const lista = document.getElementById('lista-unidades');
-  lista.innerHTML = unidades.map((u,i) => `
-    <span class="unidade-item">${u}
-      <button style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:11px;padding:0;margin-left:2px" onclick="removerUnidade(${i})">✕</button>
-    </span>`).join('');
+  lista.innerHTML = unidades.map((u,i) => `     <span class="unidade-item">${u}       <button style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:11px;padding:0;margin-left:2px" onclick="removerUnidade(${i})">✕</button>     </span>`).join('');
 }
 
 function adicionarUnidade(){
@@ -4094,33 +3801,14 @@ function abrirDetalhesProjeto(elOrId){
   };
 
   document.getElementById('mpd-title').textContent = '🏗️ ' + p.nome;
-  document.getElementById('mpd-content').innerHTML = `
-    <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">
-      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:8px">
-        <div><div style="font-size:10px;color:#6b7280;font-weight:700">CLIENTE</div><div>👤 ${p.cliente}</div></div>
-        ${p.responsavel?`<div><div style="font-size:10px;color:#6b7280;font-weight:700">RESPONSÁVEL</div><div>🧑 ${p.responsavel}</div></div>`:''}
-        ${p.responsavelSep?`<div><div style="font-size:10px;color:#6b7280;font-weight:700">SEPARAÇÃO</div><div>👷 ${p.responsavelSep}</div></div>`:''}
-        <div><div style="font-size:10px;color:#6b7280;font-weight:700">STATUS</div><div>${sl2[p.status]||p.status}</div></div>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">
-        ${p.dataInicio?`<span class="data-badge">📅 Início: ${fmtD(p.dataInicio)}</span>`:''}
-        ${p.dataEntrega?`<span class="data-badge">🚚 Entrega: ${fmtD(p.dataEntrega)}</span>`:''}
-      </div>
-      ${p.obs?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📝 ${p.obs}</div>`:''}
-    </div>
-    ${mats.length>0?`
+  document.getElementById('mpd-content').innerHTML = `     <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:14px">       <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:8px">         <div><div style="font-size:10px;color:#6b7280;font-weight:700">CLIENTE</div><div>👤 ${p.cliente}</div></div>         ${p.responsavel?`<div><div style="font-size:10px;color:#6b7280;font-weight:700">RESPONSÁVEL</div><div>🧑 ${p.responsavel}</div></div>`:''}         ${p.responsavelSep?`<div><div style="font-size:10px;color:#6b7280;font-weight:700">SEPARAÇÃO</div><div>👷 ${p.responsavelSep}</div></div>`:''}         <div><div style="font-size:10px;color:#6b7280;font-weight:700">STATUS</div><div>${sl2[p.status]||p.status}</div></div>       </div>       <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px">         ${p.dataInicio?`<span class="data-badge">📅 Início: ${fmtD(p.dataInicio)}</span>`:''}         ${p.dataEntrega?`<span class="data-badge">🚚 Entrega: ${fmtD(p.dataEntrega)}</span>`:''}       </div>       ${p.obs?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📝 ${p.obs}</div>`:''}     </div>     ${mats.length>0?`
     <div style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px">
         <span>📦 ${sepCount}/${mats.length} separados · ${faltCount>0?`<span style="color:#dc2626">❌ ${faltCount} faltando</span>`:''}</span>
         <span style="font-weight:700;color:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}">${pct}%</span>
       </div>
       <div class="proj-prog-bar"><div class="proj-prog-fill" style="width:${pct}%;background:${pct===100?'#16a34a':pct>=50?'#d97706':'#dc2626'}"></div></div>
-    </div>`:''}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-      <button class="btn-green" onclick="fecharModal('modal-proj-det');abrirOS('${p.id}')">📋 Abrir OS</button>
-      ${pode('editar')?`<button class="btn-blue" onclick="fecharModal('modal-proj-det');abrirModalProj('${p.id}')">✏️ Editar</button>`:''}
-      ${pode('editar')?`<button class="btn-green" style="background:#ca8a04" onclick="fecharModal('modal-proj-det');abrirOrcamento('${p.id}')">💰 Orçamento</button>`:''}
-    </div>`;
+    </div>`:''}     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">       <button class="btn-green" onclick="fecharModal('modal-proj-det');abrirOS('${p.id}')">📋 Abrir OS</button>       ${pode('editar')?`<button class="btn-blue" onclick="fecharModal('modal-proj-det');abrirModalProj('${p.id}')">✏️ Editar</button>`:''}       ${pode('editar')?`<button class="btn-green" style="background:#ca8a04" onclick="fecharModal('modal-proj-det');abrirOrcamento('${p.id}')">💰 Orçamento</button>`:''}     </div>`;
   document.getElementById('modal-proj-det').classList.add('open');
 }
 
@@ -4141,12 +3829,7 @@ function filtrarEstoqueMat(){
   const drop = document.getElementById('mat-est-drop');
   if(!q){ drop.style.display='none'; return; }
   const res = produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);
-  drop.innerHTML = res.length ? res.map(p=>`
-    <div style="padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6" 
-      onmousedown="selecionarItemMat('${p.id}')">
-      <div>${p.nome}</div>
-      <div style="font-size:11px;color:#6b7280">Saldo: <strong>${p.quantidade} ${p.unidade}</strong> · ${CATS[p.categoria]?.label||p.categoria}</div>
-    </div>`).join('') : '<div style="padding:8px 10px;color:#9ca3af;font-size:12px">Nenhum item encontrado</div>';
+  drop.innerHTML = res.length ? res.map(p=>`     <div style="padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6"        onmousedown="selecionarItemMat('${p.id}')">       <div>${p.nome}</div>       <div style="font-size:11px;color:#6b7280">Saldo: <strong>${p.quantidade} ${p.unidade}</strong> · ${CATS[p.categoria]?.label||p.categoria}</div>     </div>`).join('') : '<div style="padding:8px 10px;color:#9ca3af;font-size:12px">Nenhum item encontrado</div>';
   drop.style.display = 'block';
 }
 
@@ -4157,10 +3840,7 @@ function selecionarItemMat(id){
   document.getElementById('mat-est-search').value = p.nome;
   document.getElementById('mat-est-drop').style.display = 'none';
   document.getElementById('mat-est-selected').style.display = 'block';
-  document.getElementById('mat-est-selected').innerHTML = `
-    <div style="font-weight:700">${p.nome}</div>
-    <div style="color:#16a34a">📦 Saldo atual: ${p.quantidade} ${p.unidade}</div>
-    ${p.localizacao?`<div style="color:#7c3aed;font-size:11px">📍 ${p.localizacao}</div>`:''}`;
+  document.getElementById('mat-est-selected').innerHTML = `     <div style="font-weight:700">${p.nome}</div>     <div style="color:#16a34a">📦 Saldo atual: ${p.quantidade} ${p.unidade}</div>     ${p.localizacao?`<div style="color:#7c3aed;font-size:11px">📍 ${p.localizacao}</div>`:''}`;
   // Set qty unit
   document.getElementById('mat-qty-est').focus();
 }
@@ -4270,18 +3950,7 @@ function filtrarMatProjeto(){
   const drop = document.getElementById('mp-mat-drop');
   if(!q){ drop.style.display='none'; return; }
   const res = produtos.filter(p=>p.nome.toLowerCase().includes(q)||(p.sku||'').toLowerCase().includes(q)).slice(0,8);
-  drop.innerHTML = res.length ? res.map(p=>`
-    <div style="padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center"
-      onmousedown="selecionarMatProjeto('${p.id}')">
-      <div>
-        <div style="font-weight:600">${p.nome}</div>
-        <div style="font-size:11px;color:#6b7280">${CATS[p.categoria]?.label||p.categoria}</div>
-      </div>
-      <div style="text-align:right;font-size:11px">
-        <div style="font-weight:700;color:#16a34a">${p.quantidade} ${p.unidade}</div>
-        <div style="color:#9ca3af">em estoque</div>
-      </div>
-    </div>`).join('') 
+  drop.innerHTML = res.length ? res.map(p=>`     <div style="padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center"       onmousedown="selecionarMatProjeto('${p.id}')">       <div>         <div style="font-weight:600">${p.nome}</div>         <div style="font-size:11px;color:#6b7280">${CATS[p.categoria]?.label||p.categoria}</div>       </div>       <div style="text-align:right;font-size:11px">         <div style="font-weight:700;color:#16a34a">${p.quantidade} ${p.unidade}</div>         <div style="color:#9ca3af">em estoque</div>       </div>     </div>`).join('') 
     : '<div style="padding:8px 10px;color:#9ca3af;font-size:12px">Nenhum item encontrado</div>';
   drop.style.display = 'block';
 }
@@ -4294,10 +3963,7 @@ function selecionarMatProjeto(id){
   document.getElementById('mp-mat-drop').style.display = 'none';
   const sel = document.getElementById('mp-mat-sel');
   sel.style.display = 'block';
-  sel.innerHTML = `
-    <div style="font-weight:700">${p.nome}</div>
-    <div style="color:#16a34a;font-size:12px">📦 Saldo atual: <strong>${p.quantidade} ${p.unidade}</strong></div>
-    ${p.localizacao?`<div style="color:#7c3aed;font-size:11px">📍 ${p.localizacao}</div>`:''}`;
+  sel.innerHTML = `     <div style="font-weight:700">${p.nome}</div>     <div style="color:#16a34a;font-size:12px">📦 Saldo atual: <strong>${p.quantidade} ${p.unidade}</strong></div>     ${p.localizacao?`<div style="color:#7c3aed;font-size:11px">📍 ${p.localizacao}</div>`:''}`;
   document.getElementById('mp-mat-qty').focus();
 }
 
@@ -4351,17 +4017,7 @@ function renderMpLista(){
     else if(est > 0){ badge=`🟡 Parcial (faltam ${falta} ${m.unidade})`; cor='#d97706'; }
     else { badge=`🔴 Sem estoque`; cor='#dc2626'; }
     
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:5px;gap:8px">
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:13px">${m.nome}</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:2px">
-          Saída: <strong>${m.qty} ${m.unidade}</strong> · Tem: <strong style="color:${cor}">${est} ${m.unidade}</strong>
-          ${m.obs?` · ${m.obs}`:''}
-        </div>
-        <div style="font-size:11px;font-weight:700;color:${cor};margin-top:2px">${badge}</div>
-      </div>
-      <button class="btn-red" style="font-size:11px;padding:3px 7px;flex-shrink:0" onclick="removerMatProjeto(${i})">🗑️</button>
-    </div>`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:5px;gap:8px">       <div style="flex:1">         <div style="font-weight:600;font-size:13px">${m.nome}</div>         <div style="font-size:11px;color:#6b7280;margin-top:2px">           Saída: <strong>${m.qty} ${m.unidade}</strong> · Tem: <strong style="color:${cor}">${est} ${m.unidade}</strong>           ${m.obs?` · ${m.obs}`:''}         </div>         <div style="font-size:11px;font-weight:700;color:${cor};margin-top:2px">${badge}</div>       </div>       <button class="btn-red" style="font-size:11px;padding:3px 7px;flex-shrink:0" onclick="removerMatProjeto(${i})">🗑️</button>     </div>`;
   }).join('');
 }
 // ===================== FIM MATERIAIS MODAL PROJETO =====================
@@ -4427,16 +4083,7 @@ function imprimirEtiqueta(){
   const cod = getCodigo(p);
   const url = window.location.origin + window.location.pathname + '?item=' + cod;
   const win = window.open('','_blank','width:400,height:300');
-  win.document.write(`<html><head><title>Etiqueta</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head>
-  <body style="font-family:Arial;text-align:center;padding:20px">
-  <div id="qr"></div>
-  <div style="font-weight:700;font-size:14px;margin-top:8px">${p.nome}</div>
-  <div style="color:#16a34a;font-weight:700;font-size:12px">${cod}</div>
-  ${p.sku?`<div style="color:#7c3aed;font-size:11px">SKU: ${p.sku}</div>`:''}
-  ${p.localizacao?`<div style="color:#6b7280;font-size:11px">📍 ${p.localizacao}</div>`:''}
-  <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:120,height:120,colorDark:'#14532d'});
-  setTimeout(()=>window.print(),500);<\/script></body></html>`);
+  win.document.write(`<html><head><title>Etiqueta</title>   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head>   <body style="font-family:Arial;text-align:center;padding:20px">   <div id="qr"></div>   <div style="font-weight:700;font-size:14px;margin-top:8px">${p.nome}</div>   <div style="color:#16a34a;font-weight:700;font-size:12px">${cod}</div>   ${p.sku?`<div style="color:#7c3aed;font-size:11px">SKU: ${p.sku}</div>`:''}   ${p.localizacao?`<div style="color:#6b7280;font-size:11px">📍 ${p.localizacao}</div>`:''}   <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:120,height:120,colorDark:'#14532d'});   setTimeout(()=>window.print(),500);<\/script></body></html>`);
   win.document.close();
 }
 
@@ -4444,26 +4091,14 @@ function gerarTodasEtiquetas(){
   if(!produtos.length) return showToast('Nenhum item.','err');
   const win = window.open('','_blank');
   const itens = produtos.map(p=>({p, cod:getCodigo(p), url:window.location.origin+window.location.pathname+'?item='+getCodigo(p)}));
-  win.document.write(`<html><head><title>Etiquetas</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-  <style>body{font-family:Arial}.etiq{display:inline-flex;flex-direction:column;align-items:center;border:1px solid #333;border-radius:6px;padding:8px;margin:4px;width:140px;break-inside:avoid;vertical-align:top}.nome{font-size:9px;font-weight:700;text-align:center;margin-top:5px}.cod{font-size:8px;color:#16a34a;font-weight:700}@media print{button{display:none}}</style></head>
-  <body><button onclick="window.print()" style="margin:10px;padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimir Todas</button>
-  <div>${itens.map((x,i)=>`<div class="etiq"><div id="qr${i}"></div><div class="nome">${x.p.nome}</div><div class="cod">${x.cod}</div></div>`).join('')}</div>
-  <script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script></body></html>`);
+  win.document.write(`<html><head><title>Etiquetas</title>   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>   <style>body{font-family:Arial}.etiq{display:inline-flex;flex-direction:column;align-items:center;border:1px solid #333;border-radius:6px;padding:8px;margin:4px;width:140px;break-inside:avoid;vertical-align:top}.nome{font-size:9px;font-weight:700;text-align:center;margin-top:5px}.cod{font-size:8px;color:#16a34a;font-weight:700}@media print{button{display:none}}</style></head>   <body><button onclick="window.print()" style="margin:10px;padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimir Todas</button>   <div>${itens.map((x,i)=>`<div class="etiq"><div id="qr${i}"></div><div class="nome">${x.p.nome}</div><div class="cod">${x.cod}</div></div>`).join('')}</div>   <script>window.onload=()=>{${itens.map((x,i)=>`new QRCode(document.getElementById('qr${i}'),{text:'${x.url}',width:90,height:90,colorDark:'#14532d'});`).join('')}};<\/script></body></html>`);
   win.document.close();
 }
 
 function imprimirQRSistema(){
   const url = window.location.origin + window.location.pathname;
   const win = window.open('','_blank','width=400,height=350');
-  win.document.write(`<!DOCTYPE html><html><head><title>QR - ERP Muda</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head>
-  <body style="font-family:Arial;text-align:center;padding:20px">
-  <div id="qr"></div>
-  <div style="font-weight:700;font-size:16px;margin-top:10px;color:#14532d">🌿 Muda Paisagismo</div>
-  <div style="font-size:12px;color:#6b7280;margin-top:4px">Sistema ERP — Controle de Estoque</div>
-  <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:180,height:180,colorDark:'#14532d'});
-  setTimeout(()=>window.print(),600);<\/script></body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head><title>QR - ERP Muda</title>   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script></head>   <body style="font-family:Arial;text-align:center;padding:20px">   <div id="qr"></div>   <div style="font-weight:700;font-size:16px;margin-top:10px;color:#14532d">🌿 Muda Paisagismo</div>   <div style="font-size:12px;color:#6b7280;margin-top:4px">Sistema ERP — Controle de Estoque</div>   <script>new QRCode(document.getElementById('qr'),{text:'${url}',width:180,height:180,colorDark:'#14532d'});   setTimeout(()=>window.print(),600);<\/script></body></html>`);
   win.document.close();
 }
 
@@ -4480,12 +4115,7 @@ function renderMovHistFiltro(){
   );
   if(ord==='az') fil.sort((a,b)=>a.itemNome.localeCompare(b.itemNome,'pt-BR'));
   else if(ord==='za') fil.sort((a,b)=>b.itemNome.localeCompare(a.itemNome,'pt-BR'));
-  el.innerHTML = fil.length ? fil.slice(0,10).map(h=>`
-    <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">
-      <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span>
-      <span style="flex:1">${h.itemNome}</span>
-      <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span>
-    </div>`).join('') : '<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';
+  el.innerHTML = fil.length ? fil.slice(0,10).map(h=>`     <div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;font-size:12px">       <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲':'▼'}</span>       <span style="flex:1">${h.itemNome}</span>       <span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</span>     </div>`).join('') : '<div style="color:#9ca3af;font-size:13px">Nenhuma movimentação.</div>';
 }
 
 function filtrarManutencao(){
@@ -4514,23 +4144,7 @@ async function renderListaManutencao(fil, container){
   container.innerHTML = fil.length ? fil.map((m,i)=>{
     const proxima = m.proxima ? new Date(m.proxima+'T00:00:00') : null;
     const vencida = proxima && proxima < hoje && m.status === 'funcionando';
-    return `<div class="man-card" onclick="abrirModalManutencao(${manutencoes.indexOf(m)})">
-      <div class="man-tipo-icon">${tipoIcon[m.tipo]||'📦'}</div>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:13px">${m.equipamento}</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">
-          ${m.responsavel?`<span>👤 ${m.responsavel}</span>`:''}
-          ${m.ultima?`<span>📅 Última: ${new Date(m.ultima+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}
-          ${m.proxima?`<span style="color:${vencida?'#dc2626':'#6b7280'}">⏭️ Próxima: ${new Date(m.proxima+'T00:00:00').toLocaleDateString('pt-BR')}${vencida?' ⚠️':''}</span>`:''}
-          ${m.custo?`<span>💰 R$ ${Number(m.custo).toFixed(2)}</span>`:''}
-        </div>
-        ${m.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">📝 ${m.obs}</div>`:''}
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <span class="man-status ${statusCls[m.status]||''}">${statusLabel[m.status]||m.status}</span>
-        ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();removerManutencao(${manutencoes.indexOf(m)})">🗑️</button>`:''}
-      </div>
-    </div>`;
+    return `<div class="man-card" onclick="abrirModalManutencao(${manutencoes.indexOf(m)})">       <div class="man-tipo-icon">${tipoIcon[m.tipo]||'📦'}</div>       <div style="flex:1">         <div style="font-weight:700;font-size:13px">${m.equipamento}</div>         <div style="font-size:11px;color:#6b7280;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">           ${m.responsavel?`<span>👤 ${m.responsavel}</span>`:''}           ${m.ultima?`<span>📅 Última: ${new Date(m.ultima+'T00:00:00').toLocaleDateString('pt-BR')}</span>`:''}           ${m.proxima?`<span style="color:${vencida?'#dc2626':'#6b7280'}">⏭️ Próxima: ${new Date(m.proxima+'T00:00:00').toLocaleDateString('pt-BR')}${vencida?' ⚠️':''}</span>`:''}           ${m.custo?`<span>💰 R$ ${Number(m.custo).toFixed(2)}</span>`:''}         </div>         ${m.obs?`<div style="font-size:11px;color:#9ca3af;margin-top:2px">📝 ${m.obs}</div>`:''}       </div>       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">         <span class="man-status ${statusCls[m.status]||''}">${statusLabel[m.status]||m.status}</span>         ${pode('deletar')?`<button class="btn-red" style="font-size:11px;padding:2px 6px" onclick="event.stopPropagation();removerManutencao(${manutencoes.indexOf(m)})">🗑️</button>`:''}       </div>     </div>`;
   }).join('') : '<div class="empty">Nenhum equipamento encontrado.</div>';
 }
 
@@ -4616,26 +4230,7 @@ async function processarPDF(event){
       const statusIcon = prodERP ? (ok ? '✅' : '⚠️') : '❌';
       const statusTxt = prodERP ? (ok ? 'OK' : `Estoque: ${estoque}`) : 'Não encontrado';
       const statusCor = prodERP ? (ok ? '#16a34a' : '#d97706') : '#dc2626';
-      return `<tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:8px 12px;font-size:12px">${item.nome}</td>
-        <td style="padding:8px 12px">
-          <select style="font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;width:100%" id="pdf-sel-${i}">
-            <option value="">— Não incluir —</option>
-            ${produtos.map(p => `<option value="${p.id}" ${p.id===(prodERP?.id||'')?'selected':''}>${p.nome}</option>`).join('')}
-          </select>
-        </td>
-              <td style="text-align:center">
-        <div style="display:flex;align-items:center;justify-content:center;gap:4px">
-          <input type="number" min="1" value="${item.quantidade}"
-            style="width:60px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-weight:700;text-align:center"
-            onchange="pdfItensExtraidos[${i}].quantidade=Number(this.value)">
-          <span style="font-size:11px;color:#6b7280">${item.unidade}</span>
-        </div>
-      </td>
-        <td style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280">${estoque!==null?estoque+' '+(prodERP?.unidade||''):'—'}</td>
-        <td style="padding:8px 12px;text-align:center;color:${statusCor};font-weight:700;font-size:12px">${statusIcon} ${statusTxt}</td>
-        <td style="padding:8px 12px;text-align:center"><input type="checkbox" id="pdf-chk-${i}" ${prodERP?'checked':''} style="width:16px;height:16px"></td>
-      </tr>`;
+      return `<tr style="border-bottom:1px solid #f3f4f6">         <td style="padding:8px 12px;font-size:12px">${item.nome}</td>         <td style="padding:8px 12px">           <select style="font-size:12px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;width:100%" id="pdf-sel-${i}">             <option value="">— Não incluir —</option>             ${produtos.map(p => `<option value="${p.id}" ${p.id===(prodERP?.id||'')?'selected':''}>${p.nome}</option>`).join('')}           </select>         </td>               <td style="text-align:center">         <div style="display:flex;align-items:center;justify-content:center;gap:4px">           <input type="number" min="1" value="${item.quantidade}"             style="width:60px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-weight:700;text-align:center"             onchange="pdfItensExtraidos[${i}].quantidade=Number(this.value)">           <span style="font-size:11px;color:#6b7280">${item.unidade}</span>         </div>       </td>         <td style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280">${estoque!==null?estoque+' '+(prodERP?.unidade||''):'—'}</td>         <td style="padding:8px 12px;text-align:center;color:${statusCor};font-weight:700;font-size:12px">${statusIcon} ${statusTxt}</td>         <td style="padding:8px 12px;text-align:center"><input type="checkbox" id="pdf-chk-${i}" ${prodERP?'checked':''} style="width:16px;height:16px"></td>       </tr>`;
     }).join('');
 
     document.getElementById('pdf-status').style.display = 'none';
@@ -4799,18 +4394,7 @@ async function confirmarImportacaoPDF(){
   // Mostrar resultado
   document.getElementById('pdf-dados').style.display='none';
   document.getElementById('pdf-resultado').style.display='block';
-  document.getElementById('pdf-resultado').innerHTML=`
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-top:12px">
-      <div style="font-weight:700;font-size:14px;color:#15803d">✅ Projeto criado com sucesso!</div>
-      <div style="font-size:13px;margin-top:6px;color:#374151">
-        📋 ${itensSel.length} item(ns) adicionados à OS do projeto <strong>${projetoNome}</strong>.<br>
-        <span style="color:#d97706">⚠️ Os itens ainda não foram debitados do estoque. Acesse a OS em Projetos para debitar.</span>
-      </div>
-      <div style="margin-top:10px">
-        <button class="btn-green" onclick="switchTab('projetos',document.getElementById('tab-proj'));cancelarImportacaoPDF()">🏗️ Ir para Projetos</button>
-        <button class="btn-gray" style="margin-left:8px" onclick="cancelarImportacaoPDF()">🔄 Importar novo PDF</button>
-      </div>
-    </div>`;
+  document.getElementById('pdf-resultado').innerHTML=`     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 16px;margin-top:12px">       <div style="font-weight:700;font-size:14px;color:#15803d">✅ Projeto criado com sucesso!</div>       <div style="font-size:13px;margin-top:6px;color:#374151">         📋 ${itensSel.length} item(ns) adicionados à OS do projeto <strong>${projetoNome}</strong>.<br>         <span style="color:#d97706">⚠️ Os itens ainda não foram debitados do estoque. Acesse a OS em Projetos para debitar.</span>       </div>       <div style="margin-top:10px">         <button class="btn-green" onclick="switchTab('projetos',document.getElementById('tab-proj'));cancelarImportacaoPDF()">🏗️ Ir para Projetos</button>         <button class="btn-gray" style="margin-left:8px" onclick="cancelarImportacaoPDF()">🔄 Importar novo PDF</button>       </div>     </div>`;
   await carregarDados();
 }
 
