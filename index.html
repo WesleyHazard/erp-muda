@@ -2591,7 +2591,11 @@ function renderRelPorProjeto(){
       ...historico.map(h => h.projeto).filter(p => p && p !== '—')
     ]);
     [...nomesProj].sort().forEach(p => rpp.innerHTML += `<option value="${p}">${p}</option>`);
-    if(proj) rpp.value = proj; // Restaurar seleção
+    // Restaurar seleção — verificar se o valor existe nas options
+    if(proj){
+      const opcoes = Array.from(rpp.options).map(o => o.value);
+      if(opcoes.includes(proj)) rpp.value = proj;
+    }
   }
 
   const de = deStr ? new Date(deStr + 'T00:00:00') : null;
