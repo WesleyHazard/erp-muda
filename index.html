@@ -1129,7 +1129,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       </div>
       <div class="rel-summary" id="rp-summary"></div>
       <div style="overflow-x:auto"><table class="rel-table">
-        <thead><tr><th>Data</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Quantidade</th></tr></thead>
+        <thead id="rp-thead"><tr><th>Data</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Quantidade</th></tr></thead>
         <tbody id="rp-body"></tbody>
       </table></div>
     </div>
@@ -2646,8 +2646,8 @@ function renderRelPorProjeto(){
   document.getElementById('rpp-body').innerHTML = html;
 }
 
-function renderInventario(){
-  if(!produtos.length){ carregarDados().then(()=>renderInventario()); return; }
+async function renderInventario(){
+  if(!produtos.length){ await carregarDados(); }
   // Popular select de categorias
   const sel=document.getElementById('inv-cat-global');
   if(sel){
@@ -2912,10 +2912,15 @@ function renderRelMovPeriodo(){
       else grupos[key].saidas+=Number(h.quantidade);
     });
     const lista=Object.values(grupos).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-    // Thead diferente para modo agrupado
+    // Atualizar thead para modo agrupado
+    const thead = document.getElementById('rp-thead');
+    if(thead) thead.innerHTML = '<tr><th>Item</th><th>Código</th><th class="num">Entradas</th><th class="num">Saídas</th><th class="num">Saldo</th></tr>';
     document.getElementById('rp-body').innerHTML=lista.length?lista.map(g=>`<tr><td style="font-weight:700">${g.nome}</td><td><span class="ic-code">${g.cod}</span></td><td class="num" style="color:#16a34a;font-weight:700">${g.entradas>0?'+'+fmtN(g.entradas):'—'}</td><td class="num" style="color:#dc2626;font-weight:700">${g.saidas>0?'-'+fmtN(g.saidas):'—'}</td><td class="num" style="font-weight:700;color:${g.entradas-g.saidas>=0?'#16a34a':'#dc2626'}">${g.entradas-g.saidas>=0?'+':''}${fmtN(g.entradas-g.saidas)}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação encontrada.</td></tr>';
     return;
   }
+  // Restaurar thead para modo detalhado
+  const theadEl = document.getElementById('rp-thead');
+  if(theadEl) theadEl.innerHTML = '<tr><th>Data</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Quantidade</th></tr>';
   document.getElementById('rp-body').innerHTML=fil.length?fil.map(h=>`<tr><td style="font-size:11px;color:#6b7280">${formatarDataLegivel(h.data)}</td><td><span style="font-weight:700;color:${h.tipo==='entrada'?'#16a34a':'#dc2626'}">${h.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td><td style="font-weight:600"><span style="font-size:10px;color:#16a34a;background:#f0fdf4;padding:1px 5px;border-radius:4px;margin-right:4px">${h.codigoInterno||''}</span>${h.itemNome}</td><td>${h.responsavel||'—'}</td><td>${h.projeto&&h.projeto!=='—'?h.projeto:'—'}</td><td style="font-size:11px;color:#6b7280">${h.motivo||'—'}</td><td class="num" style="color:${h.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${h.tipo==='entrada'?'+':'-'}${h.quantidade}</td></tr>`).join(''):'<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:24px">Nenhuma movimentação no período.</td></tr>';
 }
 
@@ -2972,7 +2977,7 @@ function gerarConteudoImpressao(id){
   if(id==='rel-auditoria'){const cat=document.getElementById('ra-cat')?.value||'';const fil=produtos.filter(p=>!cat||p.categoria===cat).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||'')));let h=`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;font-size:11px;color:#92400e;margin-bottom:12px">📋 Preencha a coluna "Contagem Física" durante a conferência.</div><table><thead><tr><th>Código</th><th>Item</th><th>Localização</th><th>Un.</th><th class="num">Qtd. Sistema</th><th class="num">Contagem</th><th class="num">Diferença</th><th>Obs.</th></tr></thead><tbody>`;fil.forEach(p=>{const cod=getCodigo(p);const cont=auditoriaContagens[p.id]||{qty:'',obs:''};const diff=cont.qty!==''?(Number(cont.qty)-Number(p.quantidade)):'';const ds=diff===''?'___':(diff>0?`<span style="color:#16a34a;font-weight:700">+${diff}</span>`:diff<0?`<span style="color:#dc2626;font-weight:700">${diff}</span>`:'0');h+=`<tr><td style="font-size:11px;color:#16a34a;font-weight:700">${cod}</td><td>${p.nome}</td><td style="color:#7c3aed;font-size:11px">${p.localizacao||'—'}</td><td>${p.unidade}</td><td class="num" style="font-weight:700">${p.quantidade}</td><td class="num">${cont.qty||'___'}</td><td class="num">${ds}</td><td style="font-size:11px">${cont.obs||'___'}</td></tr>`;});h+=`</tbody></table><div style="margin-top:12px;font-size:11px;color:#6b7280">Total: ${fil.length} itens · Data: ___/___/______ · Responsável: _______________________</div>`;return h;}
   if(id==='rel-movperiodo'){const deStr=document.getElementById('rp-de')?.value;const ateStr=document.getElementById('rp-ate')?.value;const tipo=document.getElementById('rp-tipo')?.value||'';const proj=document.getElementById('rp-proj')?.value||'';const de=deStr?new Date(deStr+'T00:00:00'):null;const ate=ateStr?new Date(ateStr+'T23:59:59'):null;const fil=historico.filter(h=>{if(tipo&&h.tipo!==tipo)return false;if(proj&&h.projeto!==proj)return false;const d=parseDateBR(h.data);if(!d)return true;if(de&&d<de)return false;if(ate&&d>ate)return false;return true;});const te=fil.filter(h=>h.tipo==='entrada').reduce((a,h)=>a+Number(h.quantidade),0);const ts=fil.filter(h=>h.tipo==='saida').reduce((a,h)=>a+Number(h.quantidade),0);let h=`<div style="font-size:12px;color:#6b7280;margin-bottom:8px">Período: ${deStr?new Date(deStr).toLocaleDateString('pt-BR'):'início'} até ${ateStr?new Date(ateStr).toLocaleDateString('pt-BR'):'hoje'}</div><div class="sumary"><div class="sc"><div class="sl">Registros</div><div class="sv">${fil.length}</div></div><div class="sc" style="border-left:3px solid #16a34a"><div class="sl">Entradas</div><div class="sv">+${fmtN(te)}</div></div><div class="sc" style="border-left:3px solid #dc2626"><div class="sl">Saídas</div><div class="sv" style="color:#dc2626">-${fmtN(ts)}</div></div></div><table><thead><tr><th>Data</th><th>Tipo</th><th>Item</th><th>Responsável</th><th>Projeto</th><th>Motivo</th><th class="num">Qtd.</th></tr></thead><tbody>`;fil.forEach(m=>{h+=`<tr><td style="font-size:11px">${m.data||'—'}</td><td><span style="font-weight:700;color:${m.tipo==='entrada'?'#16a34a':'#dc2626'}">${m.tipo==='entrada'?'▲ Entrada':'▼ Saída'}</span></td><td>${m.itemNome}</td><td>${m.responsavel||'—'}</td><td>${m.projeto&&m.projeto!=='—'?m.projeto:'—'}</td><td style="font-size:11px">${m.motivo||'—'}</td><td class="num" style="color:${m.tipo==='entrada'?'#16a34a':'#dc2626'};font-weight:700">${m.tipo==='entrada'?'+':'-'}${m.quantidade}</td></tr>`;});if(!fil.length)h+=`<tr><td colspan="7" style="text-align:center;color:#9ca3af;padding:20px">Nenhuma movimentação.</td></tr>`;h+=`</tbody></table>`;return h;}
   if(id==='rel-parados'){const dias=Number(document.getElementById('rpar-dias')?.value||30);const hoje=new Date();const ip=produtos.map(p=>{const movs=historico.filter(h=>String(h.itemId)===String(p.id));let dp=null;let uds='Nunca movimentado';if(movs.length){const ul=movs.reduce((a,b)=>{const da=parseDateBR(a.data);const db=parseDateBR(b.data);if(!da)return b;if(!db)return a;return da>db?a:b;});uds=ul.data||'—';const ud=parseDateBR(ul.data);if(ud)dp=Math.floor((hoje-ud)/(24*60*60*1000));}return{...p,dp,uds};}).filter(p=>p.dp===null||p.dp>=dias).sort((a,b)=>(b.dp||9999)-(a.dp||9999));const vp=ip.reduce((a,p)=>a+(Number(p.custo||0)*Number(p.quantidade||0)),0);let h=`<div class="sumary"><div class="sc"><div class="sl">Itens Parados</div><div class="sv" style="color:#dc2626">${ip.length}</div></div><div class="sc"><div class="sl">Valor Parado</div><div class="sv" style="color:#ca8a04;font-size:15px">R$ ${fmt(vp)}</div></div></div><table><thead><tr><th>Item</th><th>Categoria</th><th>Localização</th><th class="num">Qtd.</th><th class="num">Valor</th><th>Última Mov.</th><th>Dias</th></tr></thead><tbody>`;ip.forEach(p=>{const bc=p.dp===null||p.dp>=180?'be':p.dp>=90?'bw':'';h+=`<tr><td>${p.nome}</td><td>${CATS[p.categoria]?.icon} ${CATS[p.categoria]?.label||p.categoria}</td><td style="font-size:11px;color:#7c3aed">${p.localizacao||'—'}</td><td class="num">${fmtN(p.quantidade)} ${p.unidade}</td><td class="num">${Number(p.custo||0)>0?'R$ '+fmt(Number(p.custo)*Number(p.quantidade)):'—'}</td><td style="font-size:11px">${p.uds}</td><td><span class="badge ${bc}">${p.dp===null?'Nunca':p.dp+'d'}</span></td></tr>`;});if(!ip.length)h+=`<tr><td colspan="7" style="text-align:center;color:#16a34a;padding:20px">✅ Nenhum item parado!</td></tr>`;h+=`</tbody></table>`;return h;}
-  if(relId==='rel-geral'){
+  if(id==='rel-geral'){
     const de=document.getElementById('rg-de')?.value;
     const ate=document.getElementById('rg-ate')?.value;
     const tipo=document.getElementById('rg-tipo')?.value||'';
@@ -3006,7 +3011,7 @@ function gerarConteudoImpressao(id){
     return html;
   }
 
-  if(relId==='rel-porprojeto'){
+  if(id==='rel-porprojeto'){
     const proj=document.getElementById('rpp-proj')?.value||'';
     const de=document.getElementById('rpp-de')?.value;
     const ate=document.getElementById('rpp-ate')?.value;
@@ -4450,7 +4455,7 @@ function cancelarImportacaoPDF(){
 // ===================== FIM IMPORTAR PDF =====================
 
 async function limparHistoricoRel(){
-  if(!pode('admin')) return showToast('Apenas administradores podem limpar o histórico.','err');
+  if(!usuarioAtual || usuarioAtual.nivel !== 'admin') return showToast('Apenas administradores podem limpar o histórico.','err');
   if(!confirm('⚠️ Isso apagará TODAS as movimentações do histórico permanentemente.\nTem certeza?')) return;
   if(!confirm('Confirme novamente: apagar TODO o histórico?')) return;
   try{
