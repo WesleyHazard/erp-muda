@@ -2527,7 +2527,7 @@ function switchRel(rel){
   if(rel==='parados')renderRelParados();
   if(rel==='geral')renderRelGeral();
   if(rel==='porprojeto')renderRelPorProjeto();
-  if(rel==='inventario')renderInventario();
+  if(rel==='inventario')renderInventario().catch(e=>console.error(e));
 }
 
 function renderRelGeral(){
