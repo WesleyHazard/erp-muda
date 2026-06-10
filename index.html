@@ -1478,6 +1478,7 @@ let CATS={
 // Motivos dinâmicos - carregados via carregarCategorias()
 let motivosEntrada = ['Compra/Reposição','Devolução','Transferência','Inventário inicial','Outro'];
 let motivosSaida = ['Projeto de cliente','Manutenção','Descarte','Transferência','Outro'];
+let inventarioContagens={};
 let produtos=[],historico=[],projetos=[],fornecedores=[],notificacoes=[];
 let editItemId=null,editFornId=null,editProjId=null,editUsuId=null;
 let movItemModal=null,movTipoModal='entrada',movItemTab=null,movTipoTab='entrada';
@@ -2647,7 +2648,13 @@ function renderRelPorProjeto(){
 }
 
 async function renderInventario(){
-  if(!produtos.length){ await carregarDados(); }
+  if(!produtos.length){ 
+    await carregarDados();
+  }
+  if(!produtos.length){
+    document.getElementById('inv-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">Nenhum produto cadastrado.</td></tr>';
+    return;
+  }
   // Popular select de categorias
   const sel=document.getElementById('inv-cat-global');
   if(sel){
