@@ -3946,7 +3946,9 @@ async function debitarItemEstoque(projId, idx){
     // Atualizar produto localmente sem recarregar tudo
     const prodIdx = produtos.findIndex(x=>String(x.id)===String(prod.id));
     if(prodIdx > -1) produtos[prodIdx].quantidade = nova;
+    // Aguardar sync completo antes de renderizar — evita status "Debitado" sumir
     await syncProjetoSheets(p);
+    await new Promise(r => setTimeout(r, 300));
     renderMateriais(p);
     renderDashboard();
     showToast('✅ Debitado com sucesso!');
@@ -4379,15 +4381,18 @@ async function confirmarImportacaoPDF(){
 
   if(!proj){
     try {
-      await api({action:'addProjeto', nome:numPedido,
+      const resProjeto = await api({action:'addProjeto', nome:numPedido,
         cliente:pdfDadosProjeto.cliente||'', responsavel:pdfDadosProjeto.responsavel||'',
         dataInicio:new Date().toLocaleDateString('pt-BR'),
         dataEntrega:pdfDadosProjeto.dataEntrega||'',
         status:'ativo', obs:'Criado via importação de PDF', materiais:'[]'});
       projetoNome = numPedido;
       showToast('Projeto criado: ' + numPedido);
+      // Aguardar Sheets salvar antes de recarregar
+      await new Promise(r => setTimeout(r, 1500));
       await carregarDados();
-      proj = projetos.find(p => String(p.nome) === numPedido);
+      proj = projetos.find(p => String(p.nome) === numPedido || (resProjeto?.id && String(p.id) === String(resProjeto.id)));
+      if(!proj){ showToast('Erro: projeto não encontrado após criar.','err'); return; }
     } catch(e){ showToast('Erro ao criar projeto.','err'); return; }
   } else {
     projetoNome = proj.nome;
