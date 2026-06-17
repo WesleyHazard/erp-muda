@@ -683,10 +683,48 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
     </div>
     <div class="fg"><label>Projeto (opcional)</label><select id="mfer-proj"><option value="">Sem projeto</option></select></div>
     <div class="fg"><label>Observações</label><input type="text" id="mfer-obs" placeholder="Observações..."></div>
+    <div id="mfer-campos-extras"></div>
     <div style="display:flex;gap:8px">
       <button class="btn-confirmar" onclick="salvarEmprestimo()">Salvar</button>
       <button class="btn-gray" onclick="fecharModal('modal-ferramenta')">Cancelar</button>
     </div>
+  </div>
+</div>
+</div>
+
+<div class="modal-bg" id="modal-config-campos">
+<div class="modal" style="max-width:500px">
+  <div class="modal-title">⚙️ Personalizar Campos</div>
+  <div class="modal-sub">Adicione ou remova campos do formulário de empréstimo</div>
+  <div id="lista-campos-config" style="margin-bottom:14px"></div>
+  <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:12px">
+    <div style="font-weight:700;font-size:13px;color:#14532d;margin-bottom:8px">➕ Novo Campo</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="fg"><label>Nome do campo *</label><input type="text" id="nc-nome" placeholder="Ex: Tempo estimado"></div>
+      <div class="fg"><label>Tipo</label>
+        <select id="nc-tipo" onchange="toggleOpcoesCampo()">
+          <option value="text">Texto</option>
+          <option value="number">Número</option>
+          <option value="date">Data</option>
+          <option value="select">Lista de opções</option>
+          <option value="checkbox">Sim/Não</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" id="nc-opcoes-wrap" style="display:none;margin-bottom:8px">
+      <label>Opções (separadas por vírgula)</label>
+      <input type="text" id="nc-opcoes" placeholder="Ex: 1 dia, 3 dias, 1 semana">
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <input type="checkbox" id="nc-obrigatorio"> Obrigatório
+      </label>
+      <button class="btn-green" style="margin-left:auto" onclick="adicionarCampoPersonalizado()">Adicionar</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn-confirmar" onclick="salvarCamposPersonalizados()">💾 Salvar</button>
+    <button class="btn-gray" onclick="fecharModal('modal-config-campos')">Cancelar</button>
   </div>
 </div>
 </div>
@@ -1439,7 +1477,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
       </div>
     </div>
     <div class="alert-card">
-      <div><div class="alert-label">🔧 Alerta de ferramenta não devolvida</div><div class="alert-desc">Alertar quando uma ferramenta estiver emprestada há X dias sem devolução (deixe em branco para desativar)</div></div>
+      <div><div class="alert-label">🔧 Alerta de ferramenta não devolvida</div><div class="alert-desc">Alertar quando emprestada há X dias sem devolução (deixe em branco para desativar)</div></div>
       <div style="display:flex;align-items:center;gap:8px">
         <input type="number" class="alert-input" id="alerta-ferramenta-dias" placeholder="—" min="1" max="365">
         <span style="font-size:12px;color:#6b7280">dias</span>
@@ -1810,7 +1848,7 @@ function gerarNotificacoes(){
   if(parados.length>0) adicionarNotif(`${parados.length} item(ns) parados há +30 dias`,'atencao','😴','relatorios');
   const projAtivos=projetos.filter(p=>p.status==='ativo');
   if(projAtivos.length>0) adicionarNotif(`${projAtivos.length} projeto(s) em andamento`,'info','🏗️','projetos');
-  gerarAlertasFerramentas();
+  if(typeof gerarAlertasFerramentas === 'function') gerarAlertasFerramentas();
   // Check manutencao alerts
   const hoje = new Date();
   const manVencidas = manutencoes.filter(m=>{
@@ -3690,7 +3728,7 @@ function atualizarTabsModulos(){
     } else if(m.id === 'ferramentas'){
       sec.innerHTML = renderModuloFerramentas();
     } else {
-      sec.innerHTML = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="card-title" style="margin:0">${m.icon} ${m.nome}</div><button class="btn-green" onclick="abrirNovoRegistroModulo('${m.id}')">+ Novo Registro</button></div><p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">💡 Este módulo será personalizado em breve.</div></div>`;
+      sec.innerHTML = `         <div class="card">           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">             <div class="card-title" style="margin:0">${m.icon} ${m.nome}</div>             <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>           </div>           <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">             💡 Este módulo será personalizado em breve. Use as Configurações para definir os campos necessários.           </div>         </div>`;
     }
     mainDiv.appendChild(sec);
   });
@@ -4517,6 +4555,8 @@ async function limparHistoricoRel(){
 // ===================== MÓDULO FERRAMENTAS =====================
 let emprestimos = [];
 let editEmprestimoId = null;
+let camposPersonalizados = [];
+let camposTemp = [];
 
 async function carregarEmprestimos(){
   try{
@@ -4524,10 +4564,15 @@ async function carregarEmprestimos(){
     if(res && Array.isArray(res)) emprestimos = res;
     else emprestimos = [];
   }catch(e){ emprestimos = []; }
+  // Carregar campos personalizados do localStorage
+  try{
+    const saved = localStorage.getItem('muda_campos_ferramentas');
+    if(saved) camposPersonalizados = JSON.parse(saved);
+  }catch(e){}
 }
 
 function renderModuloFerramentas(){
-  return `<div id="sec-ferramentas-inner"></div>`;
+  return '<div id="sec-ferramentas-inner" style="min-height:200px"><div class="loading"><div class="spinner"></div><br>Carregando...</div></div>';
 }
 
 async function initFerramentas(){
@@ -4543,68 +4588,87 @@ function renderEmprestimos(){
 
   let fil = emprestimos.filter(e => {
     const matchFiltro = filtro === '' || (filtro === 'aberto' ? !e.devolvido : e.devolvido);
-    const matchBusca = !busca || e.ferramenta.toLowerCase().includes(busca) || (e.responsavel||'').toLowerCase().includes(busca);
+    const matchBusca = !busca || (e.ferramenta||'').toLowerCase().includes(busca) || (e.responsavel||'').toLowerCase().includes(busca);
     return matchFiltro && matchBusca;
   });
 
   const abertos = emprestimos.filter(e => !e.devolvido).length;
   const devolvidos = emprestimos.filter(e => e.devolvido).length;
 
-  sec.innerHTML = `
-    <div class="stats" style="margin-bottom:14px">
-      <div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">${emprestimos.length}</div><div class="stat-sub">registros</div></div></div>
-      <div class="stat-card" style="border-left-color:#dc2626"><div class="stat-icon">📤</div><div><div class="stat-label">Em aberto</div><div class="stat-value" style="color:#dc2626">${abertos}</div><div class="stat-sub">emprestados</div></div></div>
-      <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Devolvidos</div><div class="stat-value" style="color:#16a34a">${devolvidos}</div></div></div>
-    </div>
-    <div class="toolbar" style="margin-bottom:12px">
-      <div class="sw"><span class="sw-icon">🔍</span><input id="fer-busca" placeholder="Buscar ferramenta ou responsável..." oninput="renderEmprestimos()" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #d1d5db;border-radius:9px;font-size:13px;outline:none"></div>
-      <select class="sel" id="fer-filtro" onchange="renderEmprestimos()">
-        <option value="aberto">📤 Em aberto</option>
-        <option value="devolvido">✅ Devolvidos</option>
-        <option value="">Todos</option>
-      </select>
-      <button class="btn-green" onclick="abrirModalEmprestimo()">+ Novo Empréstimo</button>
-    </div>
-    <div id="lista-emprestimos">
-      ${fil.length ? fil.map((e,i) => {
-        const diasAberto = e.dataEmprestimo && !e.devolvido ? Math.floor((new Date() - new Date(e.dataEmprestimo)) / 86400000) : null;
-        const atrasado = diasAberto !== null && configAlertas.ferramenta_dias && diasAberto >= configAlertas.ferramenta_dias;
-        return `<div style="background:#fff;border:1.5px solid ${atrasado?'#fecaca':e.devolvido?'#bbf7d0':'#e5e7eb'};border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div style="flex:1;min-width:180px">
-            <div style="font-weight:700;font-size:14px">${e.ferramenta}</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:3px">👤 ${e.responsavel} ${e.projeto&&e.projeto!=='—'?'· 🏗️ '+e.projeto:''}</div>
-            <div style="font-size:11px;color:#9ca3af;margin-top:2px">📅 ${e.dataEmprestimo||'—'} ${e.devolvido&&e.dataDevolucao?'→ devolvido em '+e.dataDevolucao:''}</div>
-            ${e.obs?`<div style="font-size:11px;color:#6b7280;margin-top:2px">💬 ${e.obs}</div>`:''}
-            ${atrasado?`<div style="font-size:11px;color:#dc2626;font-weight:700;margin-top:3px">⚠️ ${diasAberto} dias em aberto</div>`:''}
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            ${!e.devolvido?`<button class="btn-in" onclick="marcarDevolvido('${e.id}')">✅ Devolvido</button>`:`<span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">✅ Devolvido</span>`}
-            <button class="btn-blue" onclick="editarEmprestimo('${e.id}')">✏️</button>
-            <button class="btn-red" onclick="excluirEmprestimo('${e.id}')">🗑️</button>
-          </div>
-        </div>`;
-      }).join('') : '<div class="empty">Nenhum registro encontrado.</div>'}
-    </div>`;
+  sec.innerHTML = '<div class="stats" style="margin-bottom:14px">' +
+    '<div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">' + emprestimos.length + '</div><div class="stat-sub">registros</div></div></div>' +
+    '<div class="stat-card" style="border-left-color:#dc2626"><div class="stat-icon">📤</div><div><div class="stat-label">Em aberto</div><div class="stat-value" style="color:#dc2626">' + abertos + '</div><div class="stat-sub">emprestados</div></div></div>' +
+    '<div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Devolvidos</div><div class="stat-value" style="color:#16a34a">' + devolvidos + '</div></div></div>' +
+    '</div>' +
+    '<div class="toolbar" style="margin-bottom:12px">' +
+    '<div class="sw"><span class="sw-icon">🔍</span><input id="fer-busca" placeholder="Buscar ferramenta ou responsável..." oninput="renderEmprestimos()" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #d1d5db;border-radius:9px;font-size:13px;outline:none"></div>' +
+    '<select class="sel" id="fer-filtro" onchange="renderEmprestimos()">' +
+    '<option value="aberto">📤 Em aberto</option>' +
+    '<option value="devolvido">✅ Devolvidos</option>' +
+    '<option value="">Todos</option>' +
+    '</select>' +
+    '<button class="btn-gray" onclick="abrirConfigCampos()">⚙️ Campos</button>' +
+    '<button class="btn-green" onclick="abrirModalEmprestimo()">+ Novo Empréstimo</button>' +
+    '</div>' +
+    '<div id="lista-emprestimos">' +
+    (fil.length ? fil.map(function(e){
+      const diasAberto = (e.dataEmprestimo && !e.devolvido) ? Math.floor((new Date() - new Date(e.dataEmprestimo)) / 86400000) : null;
+      const atrasado = diasAberto !== null && configAlertas.ferramenta_dias && diasAberto >= configAlertas.ferramenta_dias;
+      const extras = e.camposExtras || {};
+      const extrasHtml = camposPersonalizados.length ? camposPersonalizados.map(function(c){
+        const val = extras[c.id];
+        return val ? '<span style="font-size:11px;color:#6b7280">· ' + c.nome + ': ' + (c.tipo==='checkbox'?(val==='true'||val===true?'Sim':'Não'):val) + '</span>' : '';
+      }).join('') : '';
+      return '<div style="background:#fff;border:1.5px solid ' + (atrasado?'#fecaca':e.devolvido?'#bbf7d0':'#e5e7eb') + ';border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:180px">' +
+        '<div style="font-weight:700;font-size:14px">' + e.ferramenta + '</div>' +
+        '<div style="font-size:12px;color:#6b7280;margin-top:3px">👤 ' + e.responsavel + (e.projeto&&e.projeto!=='—'?' · 🏗️ '+e.projeto:'') + '</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:2px">📅 ' + (e.dataEmprestimo||'—') + (e.devolvido&&e.dataDevolucao?' → devolvido em '+e.dataDevolucao:'') + '</div>' +
+        (extrasHtml ? '<div style="margin-top:3px;display:flex;gap:8px;flex-wrap:wrap">' + extrasHtml + '</div>' : '') +
+        (e.obs ? '<div style="font-size:11px;color:#6b7280;margin-top:2px">💬 ' + e.obs + '</div>' : '') +
+        (atrasado ? '<div style="font-size:11px;color:#dc2626;font-weight:700;margin-top:3px">⚠️ ' + diasAberto + ' dias em aberto</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+        (!e.devolvido ? '<button class="btn-in" onclick="marcarDevolvido('' + e.id + '')">✅ Devolvido</button>' : '<span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">✅ Devolvido</span>') +
+        '<button class="btn-blue" onclick="abrirModalEmprestimo('' + e.id + '')">✏️</button>' +
+        '<button class="btn-red" onclick="excluirEmprestimo('' + e.id + '')">🗑️</button>' +
+        '</div></div>';
+    }).join('') : '<div class="empty">Nenhum registro encontrado.</div>') +
+    '</div>';
 }
 
 function abrirModalEmprestimo(id){
   editEmprestimoId = id || null;
-  const e = id ? emprestimos.find(x => x.id === id) : null;
+  const e = id ? emprestimos.find(function(x){ return x.id === id; }) : null;
   document.getElementById('mfer-title').textContent = e ? '✏️ Editar Empréstimo' : '🔧 Novo Empréstimo';
-  document.getElementById('mfer-nome').value = e?.ferramenta || '';
-  document.getElementById('mfer-resp').value = e?.responsavel || '';
-  document.getElementById('mfer-data').value = e?.dataEmprestimo || new Date().toISOString().split('T')[0];
-  document.getElementById('mfer-obs').value = e?.obs || '';
+  document.getElementById('mfer-nome').value = e ? (e.ferramenta||'') : '';
+  document.getElementById('mfer-resp').value = e ? (e.responsavel||'') : '';
+  document.getElementById('mfer-data').value = e ? (e.dataEmprestimo||new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0];
+  document.getElementById('mfer-obs').value = e ? (e.obs||'') : '';
   // Popular projetos
   const sel = document.getElementById('mfer-proj');
   sel.innerHTML = '<option value="">Sem projeto</option>';
-  projetos.filter(p => p.status === 'ativo').forEach(p => sel.innerHTML += `<option value="${p.nome}" ${e?.projeto===p.nome?'selected':''}>${p.nome}</option>`);
-  if(e?.projeto && e.projeto !== '—') sel.value = e.projeto;
+  projetos.filter(function(p){ return p.status === 'ativo'; }).forEach(function(p){
+    const opt = document.createElement('option');
+    opt.value = p.nome;
+    opt.textContent = p.nome;
+    if(e && e.projeto === p.nome) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  // Campos extras
+  const extras = (e && e.camposExtras) ? e.camposExtras : {};
+  const extrasDiv = document.getElementById('mfer-campos-extras');
+  extrasDiv.innerHTML = camposPersonalizados.map(function(c){
+    let input = '';
+    const val = extras[c.id] || '';
+    if(c.tipo === 'text') input = '<input type="text" id="mfer-extra-' + c.id + '" value="' + val + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"' + (c.obrigatorio?' required':'') + '>';
+    else if(c.tipo === 'number') input = '<input type="number" id="mfer-extra-' + c.id + '" value="' + val + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"' + (c.obrigatorio?' required':'') + '>';
+    else if(c.tipo === 'date') input = '<input type="date" id="mfer-extra-' + c.id + '" value="' + val + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px"' + (c.obrigatorio?' required':'') + '>';
+    else if(c.tipo === 'checkbox') input = '<label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="mfer-extra-' + c.id + '"' + (val==='true'||val===true?' checked':'') + '> Sim</label>';
+    else if(c.tipo === 'select') input = '<select id="mfer-extra-' + c.id + '" style="width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px">' + (c.opcoes||[]).map(function(o){ return '<option value="' + o + '"' + (val===o?' selected':'') + '>' + o + '</option>'; }).join('') + '</select>';
+    return '<div class="fg"><label>' + c.nome + (c.obrigatorio?' *':'') + '</label>' + input + '</div>';
+  }).join('');
   document.getElementById('modal-ferramenta').classList.add('open');
-}
-
-function editarEmprestimo(id){
-  abrirModalEmprestimo(id);
 }
 
 async function salvarEmprestimo(){
@@ -4612,6 +4676,13 @@ async function salvarEmprestimo(){
   const resp = document.getElementById('mfer-resp').value.trim();
   if(!nome) return showToast('Informe a ferramenta.','err');
   if(!resp) return showToast('Informe o responsável.','err');
+  // Coletar campos extras
+  const extras = {};
+  camposPersonalizados.forEach(function(c){
+    const el = document.getElementById('mfer-extra-' + c.id);
+    if(el) extras[c.id] = c.tipo === 'checkbox' ? String(el.checked) : el.value;
+  });
+  const empAtual = editEmprestimoId ? emprestimos.find(function(x){ return x.id === editEmprestimoId; }) : null;
   const emp = {
     id: editEmprestimoId || Date.now().toString(),
     ferramenta: nome,
@@ -4619,16 +4690,17 @@ async function salvarEmprestimo(){
     dataEmprestimo: document.getElementById('mfer-data').value,
     projeto: document.getElementById('mfer-proj').value || '—',
     obs: document.getElementById('mfer-obs').value,
-    devolvido: editEmprestimoId ? (emprestimos.find(x=>x.id===editEmprestimoId)?.devolvido||false) : false,
-    dataDevolucao: editEmprestimoId ? (emprestimos.find(x=>x.id===editEmprestimoId)?.dataDevolucao||'') : ''
+    devolvido: empAtual ? empAtual.devolvido : false,
+    dataDevolucao: empAtual ? (empAtual.dataDevolucao||'') : '',
+    camposExtras: JSON.stringify(extras)
   };
   try{
     if(editEmprestimoId){
       await api({action:'editEmprestimo', ...emp});
-      emprestimos = emprestimos.map(x => x.id === editEmprestimoId ? emp : x);
+      emprestimos = emprestimos.map(function(x){ return x.id === editEmprestimoId ? {...emp, camposExtras: extras, devolvido: empAtual?.devolvido||false} : x; });
     } else {
       await api({action:'addEmprestimo', ...emp});
-      emprestimos.push(emp);
+      emprestimos.push({...emp, camposExtras: extras, devolvido: false});
     }
     showToast(editEmprestimoId ? 'Empréstimo atualizado!' : 'Empréstimo registrado!');
     fecharModal('modal-ferramenta');
@@ -4637,13 +4709,13 @@ async function salvarEmprestimo(){
 }
 
 async function marcarDevolvido(id){
-  const emp = emprestimos.find(x => x.id === id);
+  const emp = emprestimos.find(function(x){ return x.id === id; });
   if(!emp) return;
-  if(!confirm(`Marcar "${emp.ferramenta}" como devolvida?`)) return;
+  if(!confirm('Marcar "' + emp.ferramenta + '" como devolvida?')) return;
   emp.devolvido = true;
   emp.dataDevolucao = new Date().toLocaleDateString('pt-BR');
   try{
-    await api({action:'editEmprestimo', ...emp});
+    await api({action:'editEmprestimo', ...emp, camposExtras: JSON.stringify(emp.camposExtras||{})});
     showToast('✅ Marcado como devolvido!');
     renderEmprestimos();
   }catch(e){ showToast('Erro.','err'); }
@@ -4653,24 +4725,86 @@ async function excluirEmprestimo(id){
   if(!confirm('Excluir este registro?')) return;
   try{
     await api({action:'deleteEmprestimo', id});
-    emprestimos = emprestimos.filter(x => x.id !== id);
+    emprestimos = emprestimos.filter(function(x){ return x.id !== id; });
     showToast('Registro excluído.');
     renderEmprestimos();
   }catch(e){ showToast('Erro.','err'); }
 }
 
+// ---- Personalização de campos ----
+function abrirConfigCampos(){
+  camposTemp = JSON.parse(JSON.stringify(camposPersonalizados));
+  renderListaCamposConfig();
+  document.getElementById('nc-nome').value = '';
+  document.getElementById('nc-tipo').value = 'text';
+  document.getElementById('nc-opcoes').value = '';
+  document.getElementById('nc-obrigatorio').checked = false;
+  document.getElementById('nc-opcoes-wrap').style.display = 'none';
+  document.getElementById('modal-config-campos').classList.add('open');
+}
+
+function toggleOpcoesCampo(){
+  const tipo = document.getElementById('nc-tipo').value;
+  document.getElementById('nc-opcoes-wrap').style.display = tipo === 'select' ? 'block' : 'none';
+}
+
+function renderListaCamposConfig(){
+  const lista = document.getElementById('lista-campos-config');
+  const fixos = [
+    {nome:'Ferramenta', fixo:true},
+    {nome:'Responsável', fixo:true},
+    {nome:'Data', fixo:true},
+    {nome:'Projeto (opcional)', fixo:true},
+    {nome:'Observações', fixo:true}
+  ];
+  lista.innerHTML = '<div style="font-size:12px;font-weight:700;color:#6b7280;margin-bottom:6px">Campos fixos (não removíveis):</div>' +
+    fixos.map(function(c){ return '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:4px;font-size:13px;color:#6b7280">🔒 ' + c.nome + '</div>'; }).join('') +
+    (camposTemp.length ? '<div style="font-size:12px;font-weight:700;color:#6b7280;margin:10px 0 6px">Campos personalizados:</div>' + camposTemp.map(function(c, i){
+      return '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:13px">✏️ ' + c.nome + ' <span style="color:#9ca3af;font-size:11px">(' + c.tipo + (c.obrigatorio?' · obrigatório':'') + ')</span></span>' +
+        '<button class="btn-red" style="font-size:11px;padding:3px 7px" onclick="removerCampoTemp(' + i + ')">🗑️</button>' +
+        '</div>';
+    }).join('') : '<div style="color:#9ca3af;font-size:12px;margin-top:8px">Nenhum campo personalizado ainda.</div>');
+}
+
+function adicionarCampoPersonalizado(){
+  const nome = document.getElementById('nc-nome').value.trim();
+  if(!nome) return showToast('Informe o nome do campo.','err');
+  const tipo = document.getElementById('nc-tipo').value;
+  const obrigatorio = document.getElementById('nc-obrigatorio').checked;
+  const opcoesStr = document.getElementById('nc-opcoes').value;
+  const opcoes = tipo === 'select' ? opcoesStr.split(',').map(function(o){ return o.trim(); }).filter(Boolean) : [];
+  const id = nome.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'') + '_' + Date.now();
+  camposTemp.push({id, nome, tipo, obrigatorio, opcoes});
+  document.getElementById('nc-nome').value = '';
+  document.getElementById('nc-opcoes').value = '';
+  document.getElementById('nc-obrigatorio').checked = false;
+  renderListaCamposConfig();
+  showToast('Campo adicionado!');
+}
+
+function removerCampoTemp(i){
+  camposTemp.splice(i, 1);
+  renderListaCamposConfig();
+}
+
+function salvarCamposPersonalizados(){
+  camposPersonalizados = JSON.parse(JSON.stringify(camposTemp));
+  localStorage.setItem('muda_campos_ferramentas', JSON.stringify(camposPersonalizados));
+  fecharModal('modal-config-campos');
+  showToast('Campos salvos!');
+  renderEmprestimos();
+}
+
 function gerarAlertasFerramentas(){
-  if(!configAlertas.ferramenta_dias) return;
+  if(!configAlertas || !configAlertas.ferramenta_dias) return;
   const hoje = new Date();
-  const atrasados = emprestimos.filter(e => {
-    if(e.devolvido) return false;
+  emprestimos.filter(function(e){ return !e.devolvido && e.dataEmprestimo; }).forEach(function(e){
     const d = new Date(e.dataEmprestimo);
     const dias = Math.floor((hoje - d) / 86400000);
-    return dias >= configAlertas.ferramenta_dias;
-  });
-  atrasados.forEach(e => {
-    const dias = Math.floor((hoje - new Date(e.dataEmprestimo)) / 86400000);
-    adicionarNotif(`🔧 "${e.ferramenta}" com ${e.responsavel} há ${dias} dias sem devolução`,'urgente','🔧','ferramentas');
+    if(dias >= configAlertas.ferramenta_dias){
+      adicionarNotif('🔧 "' + e.ferramenta + '" com ' + e.responsavel + ' há ' + dias + ' dias sem devolução','urgente','🔧','ferramentas');
+    }
   });
 }
 // ===================== FIM MÓDULO FERRAMENTAS =====================
