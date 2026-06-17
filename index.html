@@ -671,6 +671,26 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
   <div id="mpd-content" style="margin-top:12px"></div>
 </div>
 </div>
+
+<div class="modal-bg" id="modal-ferramenta">
+<div class="modal" style="max-width:480px">
+  <div class="modal-title" id="mfer-title">🔧 Novo Empréstimo</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+    <div class="fg"><label>Ferramenta *</label><input type="text" id="mfer-nome" placeholder="Ex: Escada Robocop Laranja, Furadeira Bosch..."></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>Responsável *</label><input type="text" id="mfer-resp" placeholder="Quem pegou"></div>
+      <div class="fg"><label>Data</label><input type="date" id="mfer-data"></div>
+    </div>
+    <div class="fg"><label>Projeto (opcional)</label><select id="mfer-proj"><option value="">Sem projeto</option></select></div>
+    <div class="fg"><label>Observações</label><input type="text" id="mfer-obs" placeholder="Observações..."></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-confirmar" onclick="salvarEmprestimo()">Salvar</button>
+      <button class="btn-gray" onclick="fecharModal('modal-ferramenta')">Cancelar</button>
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- SISTEMA -->
 <div id="tela-sistema" style="display:none">
 <div class="header">
@@ -1418,7 +1438,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f7f4;color:#1a1a1
         <span style="font-size:12px;color:#6b7280">dias antes</span>
       </div>
     </div>
-    <button class="btn-green" style="margin-top:12px" onclick="salvarAlertas()">💾 Salvar Alertas</button>
+    <div class="alert-card">
+      <div><div class="alert-label">🔧 Alerta de ferramenta não devolvida</div><div class="alert-desc">Alertar quando uma ferramenta estiver emprestada há X dias sem devolução (deixe em branco para desativar)</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" class="alert-input" id="alerta-ferramenta-dias" placeholder="—" min="1" max="365">
+        <span style="font-size:12px;color:#6b7280">dias</span>
+      </div>
+    </div>
+        <button class="btn-green" style="margin-top:12px" onclick="salvarAlertas()">💾 Salvar Alertas</button>
   </div>
 
   <!-- UNIDADES -->
@@ -1625,6 +1652,7 @@ function switchTab(tab,el){
   if(tab==='projetos')renderProjetos();
   if(tab==='fornecedores')renderFornecedores();
   if(tab==='relatorios')initRelatorios();
+  if(tab==='mod-ferramentas')initFerramentas();
   if(tab==='configuracoes')initConfiguracoes();
   document.querySelectorAll('.col-menu').forEach(m=>m.classList.remove('open'));
   document.getElementById('notif-panel').classList.remove('open');
@@ -1782,6 +1810,7 @@ function gerarNotificacoes(){
   if(parados.length>0) adicionarNotif(`${parados.length} item(ns) parados há +30 dias`,'atencao','😴','relatorios');
   const projAtivos=projetos.filter(p=>p.status==='ativo');
   if(projAtivos.length>0) adicionarNotif(`${projAtivos.length} projeto(s) em andamento`,'info','🏗️','projetos');
+  gerarAlertasFerramentas();
   // Check manutencao alerts
   const hoje = new Date();
   const manVencidas = manutencoes.filter(m=>{
@@ -3612,6 +3641,7 @@ async function carregarModulos(){
       else modulos = [
         {id:'logistica', nome:'Logística', icon:'🚚', desc:'Controle de entregas e pedidos', ativo:false},
         {id:'manutencao', nome:'Manutenção', icon:'🔧', desc:'Manutenção de equipamentos e ferramentas', ativo:false},
+        {id:'ferramentas', nome:'Ferramentas', icon:'🔧', desc:'Controle de empréstimo de ferramentas', ativo:false},
         {id:'viveiro', nome:'Viveiro', icon:'🌱', desc:'Controle de mudas em produção', ativo:false},
         {id:'agenda', nome:'Agenda', icon:'📅', desc:'Calendário de projetos e visitas', ativo:false},
       ];
@@ -3657,8 +3687,10 @@ function atualizarTabsModulos(){
     // Render specific content based on module id
     if(m.id === 'manutencao'){
       sec.innerHTML = renderModuloManutencao();
+    } else if(m.id === 'ferramentas'){
+      sec.innerHTML = renderModuloFerramentas();
     } else {
-      sec.innerHTML = `         <div class="card">           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">             <div class="card-title" style="margin:0">${m.icon} ${m.nome}</div>             <button class="btn-green" onclick="abrirModalManutencao()">+ Novo Registro</button>           </div>           <p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p>           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">             💡 Este módulo será personalizado em breve. Use as Configurações para definir os campos necessários.           </div>         </div>`;
+      sec.innerHTML = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div class="card-title" style="margin:0">${m.icon} ${m.nome}</div><button class="btn-green" onclick="abrirNovoRegistroModulo('${m.id}')">+ Novo Registro</button></div><p style="font-size:13px;color:#6b7280;margin-bottom:16px">${m.desc}</p><div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;color:#92400e">💡 Este módulo será personalizado em breve.</div></div>`;
     }
     mainDiv.appendChild(sec);
   });
@@ -3730,13 +3762,17 @@ function carregarAlertas(){
   document.getElementById('alerta-dias-parado').value = configAlertas.diasParado||30;
   document.getElementById('alerta-estoque-baixo').checked = configAlertas.estoqueBaixo!==false;
   document.getElementById('alerta-prazo-proj').value = configAlertas.prazoProjeto||3;
+  const fdEl = document.getElementById('alerta-ferramenta-dias');
+  if(fdEl) fdEl.value = configAlertas.ferramenta_dias||'';
 }
 
 async function salvarAlertas(){
+  const fdVal = document.getElementById('alerta-ferramenta-dias')?.value;
   configAlertas = {
     diasParado: Number(document.getElementById('alerta-dias-parado').value)||30,
     estoqueBaixo: document.getElementById('alerta-estoque-baixo').checked,
-    prazoProjeto: Number(document.getElementById('alerta-prazo-proj').value)||3
+    prazoProjeto: Number(document.getElementById('alerta-prazo-proj').value)||3,
+    ferramenta_dias: fdVal ? Number(fdVal) : null
   };
   localStorage.setItem('muda_alertas', JSON.stringify(configAlertas));
   try{ await api({action:'saveConfiguracao', chave:'alertas', valor:JSON.stringify(configAlertas)}); }catch(e){}
@@ -3946,7 +3982,6 @@ async function debitarItemEstoque(projId, idx){
     // Atualizar produto localmente sem recarregar tudo
     const prodIdx = produtos.findIndex(x=>String(x.id)===String(prod.id));
     if(prodIdx > -1) produtos[prodIdx].quantidade = nova;
-    // Aguardar sync completo antes de renderizar — evita status "Debitado" sumir
     await syncProjetoSheets(p);
     await new Promise(r => setTimeout(r, 300));
     renderMateriais(p);
@@ -4388,7 +4423,6 @@ async function confirmarImportacaoPDF(){
         status:'ativo', obs:'Criado via importação de PDF', materiais:'[]'});
       projetoNome = numPedido;
       showToast('Projeto criado: ' + numPedido);
-      // Aguardar Sheets salvar antes de recarregar
       await new Promise(r => setTimeout(r, 1500));
       await carregarDados();
       proj = projetos.find(p => String(p.nome) === numPedido || (resProjeto?.id && String(p.id) === String(resProjeto.id)));
@@ -4479,6 +4513,167 @@ async function limparHistoricoRel(){
   }catch(e){ showToast('Erro ao limpar histórico.','err'); }
 }
 
+
+// ===================== MÓDULO FERRAMENTAS =====================
+let emprestimos = [];
+let editEmprestimoId = null;
+
+async function carregarEmprestimos(){
+  try{
+    const res = await api({action:'getEmprestimos'});
+    if(res && Array.isArray(res)) emprestimos = res;
+    else emprestimos = [];
+  }catch(e){ emprestimos = []; }
+}
+
+function renderModuloFerramentas(){
+  return `<div id="sec-ferramentas-inner"></div>`;
+}
+
+async function initFerramentas(){
+  await carregarEmprestimos();
+  renderEmprestimos();
+}
+
+function renderEmprestimos(){
+  const sec = document.getElementById('sec-ferramentas-inner');
+  if(!sec) return;
+  const filtro = document.getElementById('fer-filtro')?.value || 'aberto';
+  const busca = (document.getElementById('fer-busca')?.value || '').toLowerCase();
+
+  let fil = emprestimos.filter(e => {
+    const matchFiltro = filtro === '' || (filtro === 'aberto' ? !e.devolvido : e.devolvido);
+    const matchBusca = !busca || e.ferramenta.toLowerCase().includes(busca) || (e.responsavel||'').toLowerCase().includes(busca);
+    return matchFiltro && matchBusca;
+  });
+
+  const abertos = emprestimos.filter(e => !e.devolvido).length;
+  const devolvidos = emprestimos.filter(e => e.devolvido).length;
+
+  sec.innerHTML = `
+    <div class="stats" style="margin-bottom:14px">
+      <div class="stat-card"><div class="stat-icon">🔧</div><div><div class="stat-label">Total</div><div class="stat-value">${emprestimos.length}</div><div class="stat-sub">registros</div></div></div>
+      <div class="stat-card" style="border-left-color:#dc2626"><div class="stat-icon">📤</div><div><div class="stat-label">Em aberto</div><div class="stat-value" style="color:#dc2626">${abertos}</div><div class="stat-sub">emprestados</div></div></div>
+      <div class="stat-card" style="border-left-color:#16a34a"><div class="stat-icon">✅</div><div><div class="stat-label">Devolvidos</div><div class="stat-value" style="color:#16a34a">${devolvidos}</div></div></div>
+    </div>
+    <div class="toolbar" style="margin-bottom:12px">
+      <div class="sw"><span class="sw-icon">🔍</span><input id="fer-busca" placeholder="Buscar ferramenta ou responsável..." oninput="renderEmprestimos()" style="width:100%;padding:8px 12px 8px 32px;border:1.5px solid #d1d5db;border-radius:9px;font-size:13px;outline:none"></div>
+      <select class="sel" id="fer-filtro" onchange="renderEmprestimos()">
+        <option value="aberto">📤 Em aberto</option>
+        <option value="devolvido">✅ Devolvidos</option>
+        <option value="">Todos</option>
+      </select>
+      <button class="btn-green" onclick="abrirModalEmprestimo()">+ Novo Empréstimo</button>
+    </div>
+    <div id="lista-emprestimos">
+      ${fil.length ? fil.map((e,i) => {
+        const diasAberto = e.dataEmprestimo && !e.devolvido ? Math.floor((new Date() - new Date(e.dataEmprestimo)) / 86400000) : null;
+        const atrasado = diasAberto !== null && configAlertas.ferramenta_dias && diasAberto >= configAlertas.ferramenta_dias;
+        return `<div style="background:#fff;border:1.5px solid ${atrasado?'#fecaca':e.devolvido?'#bbf7d0':'#e5e7eb'};border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <div style="font-weight:700;font-size:14px">${e.ferramenta}</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:3px">👤 ${e.responsavel} ${e.projeto&&e.projeto!=='—'?'· 🏗️ '+e.projeto:''}</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:2px">📅 ${e.dataEmprestimo||'—'} ${e.devolvido&&e.dataDevolucao?'→ devolvido em '+e.dataDevolucao:''}</div>
+            ${e.obs?`<div style="font-size:11px;color:#6b7280;margin-top:2px">💬 ${e.obs}</div>`:''}
+            ${atrasado?`<div style="font-size:11px;color:#dc2626;font-weight:700;margin-top:3px">⚠️ ${diasAberto} dias em aberto</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            ${!e.devolvido?`<button class="btn-in" onclick="marcarDevolvido('${e.id}')">✅ Devolvido</button>`:`<span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">✅ Devolvido</span>`}
+            <button class="btn-blue" onclick="editarEmprestimo('${e.id}')">✏️</button>
+            <button class="btn-red" onclick="excluirEmprestimo('${e.id}')">🗑️</button>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty">Nenhum registro encontrado.</div>'}
+    </div>`;
+}
+
+function abrirModalEmprestimo(id){
+  editEmprestimoId = id || null;
+  const e = id ? emprestimos.find(x => x.id === id) : null;
+  document.getElementById('mfer-title').textContent = e ? '✏️ Editar Empréstimo' : '🔧 Novo Empréstimo';
+  document.getElementById('mfer-nome').value = e?.ferramenta || '';
+  document.getElementById('mfer-resp').value = e?.responsavel || '';
+  document.getElementById('mfer-data').value = e?.dataEmprestimo || new Date().toISOString().split('T')[0];
+  document.getElementById('mfer-obs').value = e?.obs || '';
+  // Popular projetos
+  const sel = document.getElementById('mfer-proj');
+  sel.innerHTML = '<option value="">Sem projeto</option>';
+  projetos.filter(p => p.status === 'ativo').forEach(p => sel.innerHTML += `<option value="${p.nome}" ${e?.projeto===p.nome?'selected':''}>${p.nome}</option>`);
+  if(e?.projeto && e.projeto !== '—') sel.value = e.projeto;
+  document.getElementById('modal-ferramenta').classList.add('open');
+}
+
+function editarEmprestimo(id){
+  abrirModalEmprestimo(id);
+}
+
+async function salvarEmprestimo(){
+  const nome = document.getElementById('mfer-nome').value.trim();
+  const resp = document.getElementById('mfer-resp').value.trim();
+  if(!nome) return showToast('Informe a ferramenta.','err');
+  if(!resp) return showToast('Informe o responsável.','err');
+  const emp = {
+    id: editEmprestimoId || Date.now().toString(),
+    ferramenta: nome,
+    responsavel: resp,
+    dataEmprestimo: document.getElementById('mfer-data').value,
+    projeto: document.getElementById('mfer-proj').value || '—',
+    obs: document.getElementById('mfer-obs').value,
+    devolvido: editEmprestimoId ? (emprestimos.find(x=>x.id===editEmprestimoId)?.devolvido||false) : false,
+    dataDevolucao: editEmprestimoId ? (emprestimos.find(x=>x.id===editEmprestimoId)?.dataDevolucao||'') : ''
+  };
+  try{
+    if(editEmprestimoId){
+      await api({action:'editEmprestimo', ...emp});
+      emprestimos = emprestimos.map(x => x.id === editEmprestimoId ? emp : x);
+    } else {
+      await api({action:'addEmprestimo', ...emp});
+      emprestimos.push(emp);
+    }
+    showToast(editEmprestimoId ? 'Empréstimo atualizado!' : 'Empréstimo registrado!');
+    fecharModal('modal-ferramenta');
+    renderEmprestimos();
+  }catch(e){ showToast('Erro ao salvar.','err'); }
+}
+
+async function marcarDevolvido(id){
+  const emp = emprestimos.find(x => x.id === id);
+  if(!emp) return;
+  if(!confirm(`Marcar "${emp.ferramenta}" como devolvida?`)) return;
+  emp.devolvido = true;
+  emp.dataDevolucao = new Date().toLocaleDateString('pt-BR');
+  try{
+    await api({action:'editEmprestimo', ...emp});
+    showToast('✅ Marcado como devolvido!');
+    renderEmprestimos();
+  }catch(e){ showToast('Erro.','err'); }
+}
+
+async function excluirEmprestimo(id){
+  if(!confirm('Excluir este registro?')) return;
+  try{
+    await api({action:'deleteEmprestimo', id});
+    emprestimos = emprestimos.filter(x => x.id !== id);
+    showToast('Registro excluído.');
+    renderEmprestimos();
+  }catch(e){ showToast('Erro.','err'); }
+}
+
+function gerarAlertasFerramentas(){
+  if(!configAlertas.ferramenta_dias) return;
+  const hoje = new Date();
+  const atrasados = emprestimos.filter(e => {
+    if(e.devolvido) return false;
+    const d = new Date(e.dataEmprestimo);
+    const dias = Math.floor((hoje - d) / 86400000);
+    return dias >= configAlertas.ferramenta_dias;
+  });
+  atrasados.forEach(e => {
+    const dias = Math.floor((hoje - new Date(e.dataEmprestimo)) / 86400000);
+    adicionarNotif(`🔧 "${e.ferramenta}" com ${e.responsavel} há ${dias} dias sem devolução`,'urgente','🔧','ferramentas');
+  });
+}
+// ===================== FIM MÓDULO FERRAMENTAS =====================
 </script>
 </body>
 </html>
