@@ -4629,9 +4629,9 @@ function renderEmprestimos(){
         (atrasado ? '<div style="font-size:11px;color:#dc2626;font-weight:700;margin-top:3px">⚠️ ' + diasAberto + ' dias em aberto</div>' : '') +
         '</div>' +
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
-        (!e.devolvido ? '<button class="btn-in" onclick="marcarDevolvido('' + e.id + '')">✅ Devolvido</button>' : '<span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">✅ Devolvido</span>') +
-        '<button class="btn-blue" onclick="abrirModalEmprestimo('' + e.id + '')">✏️</button>' +
-        '<button class="btn-red" onclick="excluirEmprestimo('' + e.id + '')">🗑️</button>' +
+        (!e.devolvido ? '<button class="btn-in" onclick="marcarDevolvido(\'' + e.id + '\')">✅ Devolvido</button>' : '<span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700">✅ Devolvido</span>') +
+        '<button class="btn-blue" onclick="abrirModalEmprestimo(\'' + e.id + '\')">✏️</button>' +
+        '<button class="btn-red" onclick="excluirEmprestimo(\'' + e.id + '\')">🗑️</button>' +
         '</div></div>';
     }).join('') : '<div class="empty">Nenhum registro encontrado.</div>') +
     '</div>';
