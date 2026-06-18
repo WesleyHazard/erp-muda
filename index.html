@@ -4373,50 +4373,92 @@ async function processarPDF(event){
 function extrairDadosPDF(texto){
   const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // Extrair campos pelo label exato
-  const extrairCampo = (label) => {
-    const idx = linhas.findIndex(l => l.toUpperCase() === label.toUpperCase());
-    return (idx > -1 && idx+1 < linhas.length) ? linhas[idx+1] : '';
-  };
+  const unidadesValidas = new Set(['UNIDADE','SACO','PACOTE','KG','G','L','M',
+    'M²','CX','ROLO','HH','PCT','MÇ','MAÇO','HASTE','LITRO','METRO','MACOS',
+    'CARTUCHO','PAR','BALDE','LATA','CAIXA','FRASCO','BISNAGA','TUBO','POTE',
+    'GALAO','GALÃO','TABUA','TÁBUA','CHAPA','FOLHA','UN','MT','KIT']);
 
-  // Número do pedido
-  const numero = extrairCampo('PEDIDO');
-
-  // Cliente — pode ter múltiplas linhas entre CLIENTE e PEDIDO
-  const idxCli = linhas.findIndex(l => l.toUpperCase() === 'CLIENTE');
-  const idxPed = linhas.findIndex(l => l.toUpperCase() === 'PEDIDO');
-  const clienteLinhas = (idxCli > -1 && idxPed > idxCli) ? linhas.slice(idxCli+1, idxPed) : [];
-  const cliente = clienteLinhas.join(' ').trim() || numero;
-
-  const responsavel = extrairCampo('RESPONSÁVEL');
-  const dataEntrega = extrairCampo('DATA DE ENTREGA');
-
-  // Extrair itens das seções Produtos e Insumos
-  const itens = [];
   const labelsIgnorar = new Set(['ITEM','QUANTIDADE','UNIDADE','MEMORIAL DE PRODUÇÃO',
     'CLIENTE','PEDIDO','PRODUTO','VENDEDOR','RESPONSÁVEL','DATA DE EMISSÃO',
-    'DATA DE ENTREGA','BAIRRO','OBSERVAÇÕES']);
-  const unidadesValidas = new Set(['UNIDADE','SACO','PACOTE','KG','G','L','M',
-    'M²','CX','ROLO','HH','PCT','MÇ','MAÇO','HASTE','LITRO','METRO','MACOS']);
+    'DATA DE ENTREGA','BAIRRO','OBSERVAÇÕES','ITEM QUANTIDADE UNIDADE']);
 
+  // Detectar formato: linha única "Nome 710 UNIDADE" ou 3 linhas separadas
+  const formatoUnico = linhas.some(l => {
+    const partes = l.split(' ');
+    if(partes.length < 3) return false;
+    const ultima = partes[partes.length-1].toUpperCase();
+    const penultima = partes[partes.length-2];
+    return unidadesValidas.has(ultima) && !isNaN(parseFloat(penultima.replace(',','.')));
+  });
+
+  // Extrair cabeçalho
+  let numero = '', cliente = '', responsavel = '', dataEntrega = '';
+
+  // Buscar em linhas combinadas (ex: "CLIENTE PEDIDO PRODUTO" + "Nome 1376817988 JVA")
+  for(let i = 0; i < linhas.length; i++){
+    const l = linhas[i];
+    if(l.toUpperCase().includes('PEDIDO') && i+1 < linhas.length){
+      const proxParts = linhas[i+1].split(/\s+/);
+      // Número do pedido é um número longo
+      const numIdx = proxParts.findIndex(p => /^\d{6,}$/.test(p));
+      if(numIdx > -1){
+        numero = proxParts[numIdx];
+        cliente = proxParts.slice(0, numIdx).join(' ').trim() || numero;
+      }
+    }
+    if(l.toUpperCase().includes('RESPONSÁVEL') && i+1 < linhas.length){
+      const proxParts = linhas[i+1].split(/\s+/);
+      // Responsável: "Gabriel Herreria 15/06/2026"
+      const dataIdx = proxParts.findIndex(p => /\d{2}\/\d{2}\/\d{4}/.test(p));
+      if(dataIdx > -1) responsavel = proxParts.slice(0, dataIdx).join(' ').trim();
+      else responsavel = proxParts.join(' ').trim();
+    }
+    if(l.toUpperCase().includes('DATA DE ENTREGA') && i+1 < linhas.length){
+      const proxParts = linhas[i+1].split(/\s+/);
+      dataEntrega = proxParts.find(p => /\d{2}\/\d{2}\/\d{4}/.test(p)) || '';
+    }
+  }
+
+  // Extrair itens
+  const itens = [];
   let emSecao = false;
-  let i = 0;
-  while(i < linhas.length){
-    const linha = linhas[i];
-    if(/^Produtos$/i.test(linha) || /^Insumos$/i.test(linha)){ emSecao=true; i++; continue; }
-    if(/^Servi[çc]os$/i.test(linha) || linha.toUpperCase()==='OBSERVAÇÕES'){ emSecao=false; i++; continue; }
-    if(!emSecao){ i++; continue; }
-    if(labelsIgnorar.has(linha.toUpperCase())){ i++; continue; }
 
-    const prox = linhas[i+1] || '';
-    const proxprox = linhas[i+2] || '';
-    const num = parseFloat(prox.replace(',','.'));
+  if(formatoUnico){
+    // Formato: "Nome Qtd UNIDADE" numa linha só
+    for(let i = 0; i < linhas.length; i++){
+      const linha = linhas[i];
+      if(/^Produtos$/i.test(linha) || /^Insumos$/i.test(linha)){ emSecao=true; continue; }
+      if(/^Servi[çc]os$/i.test(linha) || /^OBSERVA/i.test(linha)){ emSecao=false; continue; }
+      if(!emSecao) continue;
+      if(labelsIgnorar.has(linha.toUpperCase())) continue;
 
-    if(!isNaN(num) && num > 0 && unidadesValidas.has(proxprox.toUpperCase())){
-      itens.push({ nome: linha, quantidade: num, unidade: proxprox });
-      i += 3;
-    } else {
-      i++;
+      const partes = linha.split(' ');
+      if(partes.length < 3) continue;
+      const unidade = partes[partes.length-1].toUpperCase();
+      const qtdStr = partes[partes.length-2];
+      const nome = partes.slice(0, partes.length-2).join(' ').trim();
+      const qty = parseFloat(qtdStr.replace(',','.'));
+
+      if(unidadesValidas.has(unidade) && !isNaN(qty) && qty > 0 && nome){
+        itens.push({ nome, quantidade: qty, unidade: partes[partes.length-1] });
+      }
+    }
+  } else {
+    // Formato: 3 linhas separadas — Nome / Qtd / UNIDADE
+    let i = 0;
+    while(i < linhas.length){
+      const linha = linhas[i];
+      if(/^Produtos$/i.test(linha) || /^Insumos$/i.test(linha)){ emSecao=true; i++; continue; }
+      if(/^Servi[çc]os$/i.test(linha) || /^OBSERVA/i.test(linha)){ emSecao=false; i++; continue; }
+      if(!emSecao){ i++; continue; }
+      if(labelsIgnorar.has(linha.toUpperCase())){ i++; continue; }
+      const prox = linhas[i+1] || '';
+      const proxprox = linhas[i+2] || '';
+      const num = parseFloat(prox.replace(',','.'));
+      if(!isNaN(num) && num > 0 && unidadesValidas.has(proxprox.toUpperCase())){
+        itens.push({ nome: linha, quantidade: num, unidade: proxprox });
+        i += 3;
+      } else { i++; }
     }
   }
 
