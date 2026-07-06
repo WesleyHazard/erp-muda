@@ -2062,13 +2062,18 @@ async function salvarItem(){
       showToast('Item cadastrado! Código: '+codigoInterno+' 🏷️');
     }
     cancelarForm();
-    await carregarDados();
+    // Recarregar apenas produtos (mais rápido)
+    try{
+      const prods = await api({action:'getProdutos'});
+      if(prods && Array.isArray(prods)) produtos = prods;
+      renderEstoque(); renderDashboard();
+    }catch(e){ await carregarDados(); }
     // Auto-show QR for new item after data loads
     if(!editItemId){
       setTimeout(()=>{
         const novoProd = produtos.find(x=>x.codigoInterno===codigoInterno);
         if(novoProd && pode('qr')) abrirQR(novoProd.id);
-      }, 1000);
+      }, 500);
     }
   }catch(e){showToast('Erro ao salvar.','err');}
 }
@@ -2153,7 +2158,10 @@ async function salvarMovTab(){
       estoqueMaximo:p.estoqueMaximo||0,fornecedor:p.fornecedor||'',custo:p.custo||0,
       descricao:p.descricao||'',observacoes:p.observacoes||'',foto:p.foto||'',
       codigoInterno:p.codigoInterno||''});
-    await carregarDados();
+    // Atualizar localmente
+    const idxP=produtos.findIndex(x=>String(x.id)===String(p.id));
+    if(idxP>-1) produtos[idxP].quantidade=nova;
+    renderEstoque(); renderDashboard(); renderMovHistResumo(); renderMovBaixo();
   }catch(e){ showToast('Erro ao sincronizar.','err'); }
 }
 
@@ -2405,8 +2413,11 @@ async function salvarProjeto(){
     showToast(editProjId?'Projeto atualizado!':'Projeto cadastrado!');
     registrarLog('edicao',`Projeto ${editProjId?'atualizado':'cadastrado'}: ${nome}`,'🏗️');
     fecharModal('modal-proj');
-    await carregarDados();
-    popularMovSels();
+    try{
+      const projs=await api({action:'getProjetos'});
+      if(projs&&Array.isArray(projs)) projetos=projs;
+    }catch(e){}
+    popularMovSels(); renderProjetos(); renderDashboard();
   }catch(e){showToast('Erro ao salvar projeto.','err');}
 }
 async function deletarProj(id){
@@ -3241,8 +3252,11 @@ let osProjetoId = null;
 
 async function abrirOS(id){
   osProjetoId = id;
-  // Recarregar dados frescos do Sheets antes de abrir
-  await carregarDados();
+  // Buscar apenas os projetos (mais rápido que recarregar tudo)
+  try{
+    const projetosAtualizados = await api({action:'getProjetos'});
+    if(projetosAtualizados && Array.isArray(projetosAtualizados)) projetos = projetosAtualizados;
+  }catch(e){}
   const p = projetos.find(x => String(x.id) === String(id));
   if(!p) return;
   
